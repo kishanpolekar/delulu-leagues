@@ -1,0 +1,10 @@
+.env
+__pycache__/
+venv/
+*.pyc
+
+# Data files
+wwc_match_data.json
+espn_match_info/
+espn_names_match
+DWL_Scores.xlsx

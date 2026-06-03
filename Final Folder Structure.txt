@@ -1,0 +1,61 @@
+├── backend
+│   ├── api_server.py
+│   ├── DWL_Scores.xlsx
+│   ├── dwl_scoring_pipeline.py
+│   ├── espn_match_info
+│   │   ├── match_10.json
+│   │   └── match_11.json
+│   ├── espn_names_match
+│   │   └── espn_names_match_11.txt
+│   ├── requirements.txt
+│   ├── setup_backend.sh
+│   ├── WWC_Config.xlsx
+│   ├── wwc_fantasy.py
+│   └── wwc_match_data.json
+├── Final Folder Structure.txt
+├── frontend
+│   ├── index.html
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── public
+│   │   ├── delulu-womens-league.jpeg
+│   │   ├── logos
+│   │   │   ├── andhra-capitals.png
+│   │   │   ├── chennai-thunder.png
+│   │   │   ├── gully-divas.png
+│   │   │   ├── hyderabad-haramis.png
+│   │   │   ├── kochi-tuskers.png
+│   │   │   ├── konkan-queens.png
+│   │   │   ├── kutte-kamine-riders.png
+│   │   │   ├── nepali-rhinos.png
+│   │   │   └── rajasthan-ragers.png
+│   │   └── teams-ai.jpeg
+│   ├── setup_frontend.sh
+│   ├── src
+│   │   ├── App.jsx
+│   │   ├── components
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── MatchDetailsModal.jsx
+│   │   │   ├── Matches.jsx
+│   │   │   ├── Navbar.jsx
+│   │   │   ├── PlayerNameWithBadge.jsx
+│   │   │   ├── Players.jsx
+│   │   │   ├── Scoring.jsx
+│   │   │   ├── Standings.jsx
+│   │   │   ├── Stats.jsx
+│   │   │   └── Teams.jsx
+│   │   ├── data
+│   │   │   ├── countryInfo.js
+│   │   │   ├── teamColors.js
+│   │   │   └── teamOwners.js
+│   │   ├── index.css
+│   │   ├── index.jsx
+│   │   ├── services
+│   │   │   └── api.js
+│   │   └── styles
+│   │       └── App.css
+│   └── vite.config.js
+├── Script Usage Instructions.png
+├── start.bat
+├── start.py
+└── start.sh
