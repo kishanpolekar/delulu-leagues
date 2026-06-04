@@ -1,5 +1,5 @@
-# Use the official Playwright Python image (includes browsers & dependencies)
-FROM mcr.microsoft.com/playwright/python:v1.46.0-python3.10
+# Use the official Playwright image based on Ubuntu 24.04 (Noble) with Python 3.12
+FROM mcr.microsoft.com/playwright/python:v1.57.0-noble
 
 # Set the working directory inside the container
 WORKDIR /app
