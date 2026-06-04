@@ -5,7 +5,7 @@ FROM mcr.microsoft.com/playwright/python:v1.46.0-focal
 WORKDIR /app
 
 # Copy requirements first to leverage Docker caching
-COPY backend/requirements.txt .
+COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN playwright install webkit
 
 # Copy the entire backend folder
-COPY backend/ .
+COPY . .
 
 # Expose the port your app runs on (Render sets PORT env var)
 EXPOSE 8000
