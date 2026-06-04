@@ -1,5 +1,5 @@
 # Use the official Playwright Python image (includes browsers & dependencies)
-FROM mcr.microsoft.com/playwright/python:v1.46.0-python3.11
+FROM mcr.microsoft.com/playwright/python:v1.46.0-python3.10
 
 # Set the working directory inside the container
 WORKDIR /app
