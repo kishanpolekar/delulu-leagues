@@ -114,18 +114,6 @@ app.add_middleware(
 )
 
 
-# This helps allow POST/PUT/DELETE requests from the frontend by handling preflight OPTIONS requests
-@app.options("/{rest_of_path:path}")
-async def preflight_handler(request: Request, rest_of_path: str) -> Response:
-    response = Response()
-    origin = request.headers.get("origin")
-    if origin and origin in ALLOWED_ORIGINS:
-        response.headers["Access-Control-Allow-Origin"] = origin
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-    return response
-
-
 class MatchRequest(BaseModel):
     match_id: int
     match_num: int
