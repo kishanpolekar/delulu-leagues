@@ -10,9 +10,10 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from datetime import datetime
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi import Request, Response
 from pydantic import BaseModel
 import uvicorn
 import pandas as pd
@@ -111,6 +112,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# This helps allow POST/PUT/DELETE requests from the frontend by handling preflight OPTIONS requests
+@app.options("/{rest_of_path:path}")
+async def preflight_handler(request: Request, rest_of_path: str) -> Response:
+    response = Response()
+    origin = request.headers.get("origin")
+    if origin and origin in ALLOWED_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
 
 
 class MatchRequest(BaseModel):
