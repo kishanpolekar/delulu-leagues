@@ -8,8 +8,9 @@ import Teams from './components/Teams';
 import Players from './components/Players';
 import Matches from './components/Matches';
 import Scoring from './components/Scoring';
-import Settings from './components/Settings';
 import Stats from './components/Stats';
+import AboutUs from './components/AboutUs';
+import Settings from './components/Settings';
 import { healthCheck, fetchTeams, fetchPlayers, fetchMatches, fetchAllMatchesDetails } from './services/api';
 import { calculateTournamentStats } from './services/statsService';
 import './styles/App.css';
@@ -137,6 +138,8 @@ function App() {
         return <Stats teams={teams} players={players} matches={matches} leaderMap={tournamentStats?.leaderMap || {}} tournamentStats={tournamentStats} setActiveTab={setActiveTab} />;
       case 'matches':
         return <Matches matches={matches} onMatchAdded={refreshData} />;
+      case 'about':
+        return <AboutUs />;
       case 'settings':
         return <Settings />;
       default:

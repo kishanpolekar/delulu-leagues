@@ -1,5 +1,15 @@
 import React from 'react';
-import { HomeIcon, TrophyIcon, UsersIcon, UserGroupIcon, CalendarIcon, DocumentTextIcon, ChartBarIcon, CogIcon } from '@heroicons/react/24/outline';
+import {
+  HomeIcon,
+  TrophyIcon,
+  UsersIcon,
+  UserGroupIcon,
+  InformationCircleIcon,
+  CalendarIcon,
+  DocumentTextIcon,
+  ChartBarIcon,
+  CogIcon
+} from '@heroicons/react/24/outline';
 
 const navItems = [
   { id: 'dashboard', label: '', icon: HomeIcon },
@@ -9,6 +19,7 @@ const navItems = [
   { id: 'players', label: 'Players', icon: UserGroupIcon },
   { id: 'stats', label: 'Stats', icon: ChartBarIcon },
   { id: 'matches', label: 'Matches', icon: CalendarIcon },
+  { id: 'about', label: 'About Us', icon: InformationCircleIcon },
   { id: 'settings', label: '', icon: CogIcon },
 ];
 

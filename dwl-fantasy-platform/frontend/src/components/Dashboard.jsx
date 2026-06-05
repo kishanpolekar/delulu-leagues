@@ -12,7 +12,8 @@ import {
   FireIcon,
   StarIcon,
   BoltIcon,
-  ClockIcon
+  ClockIcon,
+  InformationCircleIcon,
 } from '@heroicons/react/24/outline';
 import { teamPrimaryColors, teamEmojis } from '../data/teamColors';
 
@@ -83,6 +84,7 @@ function Dashboard({ teams, players, matches, setActiveTab }) {
     { id: 'scoring', label: 'Scoring Rules', icon: DocumentTextIcon, color: '#FF6B35', description: 'Points system' },
     { id: 'stats', label: 'Stats', icon: ChartBarIcon, color: '#2196F3', description: 'Match stats' },
     { id: 'matches', label: 'Matches', icon: CalendarIcon, color: '#9C27B0', description: 'Match center' },
+    { id: 'about', label: 'About Us', icon: InformationCircleIcon, color: '#E07519', description: 'About Us' },
   ];
 
   // Quick Stats
