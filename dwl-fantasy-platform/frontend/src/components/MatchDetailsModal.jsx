@@ -55,12 +55,14 @@ function MatchDetailsModal({ match, onClose }) {
   function formatDate(dateString) {
     if (!dateString) return '';
     
-    const date = new Date(dateString);
-    const day = date.getDate();
-    const month = date.toLocaleString('default', { month: 'short' });
-    const year = date.getFullYear();
+    // Split the YYYY-MM-DD format manually to avoid timezone issues
+    const [year, month, day] = dateString.split('-').map(Number);
     
-    return `${day}-${month}-${year}`;
+    // Use UTC month to avoid timezone shifts
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    return `${day}-${monthNames[month - 1]}-${year}`;
   }
 
   const getMatchDateAndResult = (matchTitle) => {

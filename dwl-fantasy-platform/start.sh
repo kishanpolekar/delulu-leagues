@@ -37,7 +37,7 @@ fi
 # Activate virtual environment and install dependencies
 source venv/bin/activate
 echo -e "${YELLOW}[INFO] Installing Python dependencies...${NC}"
-pip install -q fastapi uvicorn pandas openpyxl playwright python-multipart pydantic
+pip install -q fastapi uvicorn pandas openpyxl playwright python-multipart pydantic supabase
 
 # Install playwright browser
 echo -e "${YELLOW}[INFO] Installing Playwright browser...${NC}"

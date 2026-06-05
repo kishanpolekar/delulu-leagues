@@ -33,6 +33,8 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
+from supabase import create_client, Client
+
 # ── Import the existing fetcher ───────────────────────────────────────────────
 try:
     from wwc_fantasy import WWCScorecard
@@ -41,42 +43,76 @@ except ImportError:
     sys.exit(1)
 
 
+# Configure Supabase client
+supabase_client: Client = None
+def get_supabase_client() -> Client:
+    """Initialize and return the Supabase client."""
+    global supabase_client
+    if supabase_client is None:
+        url = os.getenv("SUPABASE_URL")
+        key = os.getenv("SUPABASE_KEY")
+        if not url or not key:
+            print("⚠️ SUPABASE_URL or SUPABASE_KEY not set. Supabase features will be unavailable.")
+            return None
+        supabase_client = create_client(url, key)
+    print("ℹ️ SUPABASE client connected.")
+    return supabase_client
+
 # ─────────────────────────────────────────────────────────────────────────────
 # JSON DATA STORAGE
 # ─────────────────────────────────────────────────────────────────────────────
 
-def save_match_data(match_history: dict, filename: str = "wwc_match_data.json"):
-    """Save match history to JSON file"""
-    serializable = {}
-    for mn, match_data in match_history.items():
-        serializable[str(mn)] = {
-            "match_entry": match_data.get("match_entry", {}),
-            "team1_country": match_data.get("team1_country", ""),
-            "team2_country": match_data.get("team2_country", ""),
-            "match_winner": match_data.get("match_winner", ""),
-            "match_title": match_data.get("match_title", "")
-        }
-    with open(filename, 'w') as f:
-        json.dump(serializable, f, indent=2)
+def save_match_data(match_history: dict, data_file: str = None) -> None:
+    """Save match data to Supabase using upsert."""
+    sb_client = get_supabase_client()
+    if not sb_client:
+        return
+    
+    try:
+        # Convert the dictionary of matches into a list of dicts for Supabase
+        matches_to_upsert = []
+        for match_num, match_data in match_history.items():
+            # We need to include the match_num as a column for the upsert to work
+            match_record = {**match_data, "match_num": match_num}
+            matches_to_upsert.append(match_record)
+        
+        # Perform upsert (update if exists, insert if new)
+        # The `on_conflict="match_num"` tells PostgreSQL to update the existing row
+        # if a match with the same `match_num` already exists.
+        response = sb_client.table("matches").upsert(
+            matches_to_upsert, 
+            on_conflict="match_num"
+        ).execute()
+        
+        if hasattr(response, 'error') and response.error:
+            print(f"Supabase upsert error: {response.error}")
+        else:
+            print(f"✅ Saved {len(matches_to_upsert)} match entries to Supabase")
+    except Exception as e:
+        print(f"Error saving match data to Supabase: {e}")
 
 
-def load_match_data(filename: str = "wwc_match_data.json") -> dict:
-    """Load match history from JSON file"""
-    if not Path(filename).exists():
+def load_match_data(data_file: str) -> dict:
+    """Load match data from Supabase."""
+    sb_client = get_supabase_client()
+    if not sb_client:
         return {}
-    with open(filename, 'r') as f:
-        data = json.load(f)
-    match_history = {}
-    for mn_str, match_data in data.items():
-        mn = int(mn_str)
-        match_history[mn] = {
-            "match_entry": match_data.get("match_entry", {}),
-            "team1_country": match_data.get("team1_country", ""),
-            "team2_country": match_data.get("team2_country", ""),
-            "match_winner": match_data.get("match_winner", ""),
-            "match_title": match_data.get("match_title", "")
-        }
-    return match_history
+    
+    try:
+        response = sb_client.table("matches").select("*").execute()
+        if response.data:
+            # Convert the list of matches from Supabase back to the dictionary format
+            # your app expects: { match_num: { ...match_data } }
+            match_dict = {}
+            for match in response.data:
+                match_num = match.pop("match_num")
+                match_dict[match_num] = match
+            return match_dict
+        else:
+            return {}
+    except Exception as e:
+        print(f"Error loading match data from Supabase: {e}")
+        return {}
 
 
 # ─────────────────────────────────────────────────────────────────────────────

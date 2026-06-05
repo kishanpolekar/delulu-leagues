@@ -35,7 +35,7 @@ if not exist "venv" (
 :: Activate virtual environment and install dependencies
 call venv\Scripts\activate.bat
 echo [INFO] Installing Python dependencies...
-pip install -q fastapi uvicorn pandas openpyxl playwright python-multipart pydantic
+pip install -q fastapi uvicorn pandas openpyxl playwright python-multipart pydantic supabase
 
 :: Install playwright browser
 echo [INFO] Installing Playwright browser...

@@ -80,7 +80,7 @@ def main():
         pip_exe = os.path.join(venv_path, 'bin', 'pip')
     
     subprocess.run([pip_exe, 'install', '-q', 'fastapi', 'uvicorn', 'pandas', 
-                   'openpyxl', 'playwright', 'python-multipart', 'pydantic'], 
+                   'openpyxl', 'playwright', 'python-multipart', 'pydantic', 'supabase'], 
                    cwd=backend_dir, check=True)
     
     # Install playwright
