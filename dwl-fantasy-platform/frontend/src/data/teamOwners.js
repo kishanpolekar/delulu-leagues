@@ -1,9 +1,5 @@
 // Team owner information
 export const teamOwners = {
-  'Chennai Thunder': { 
-    instaId: "slay.asray", 
-    instaUrl: "https://www.instagram.com/slay.asray/" 
-  },
   'Gully Divas': { 
     instaId: "barghavi.v", 
     instaUrl: "https://www.instagram.com/barghavi.v/" 
@@ -23,6 +19,10 @@ export const teamOwners = {
   'Sarafa Strikers': { 
     instaId: "kishanpolekar", 
     instaUrl: "https://www.instagram.com/kishanpolekar/" 
+  },
+  'Singara Singapengal': { 
+    instaId: "slay.asray", 
+    instaUrl: "https://www.instagram.com/slay.asray/" 
   },
   'Vanitha Warriors': { 
     instaId: "niksu1797", 

@@ -568,7 +568,7 @@ def process_scorecard(
         f"M{match_num}: {info.get('title','')}"
         f"  |  {info.get('date','')}"
         f"  |  {info.get('result','')}"
-        + (f"  |  MoM: {info.get('player_of_match','')}" if info.get("player_of_match") else "")
+        + (f"  |  PoM: {info.get('player_of_match','')}" if info.get("player_of_match") else "")
         + (f"  |  ⚡ SUPER OVER" if info.get('has_super_over', False) else "")
     )
     
@@ -604,7 +604,7 @@ def print_match_summary(match_entry, teams_abbr, name_to_abbr, player_team):
             mult = s["mult"]
             raw = pd["pts"]
             final = pd["final_pts"]
-            motm = " ⭐MoM" if pd["is_motm"] else ""
+            motm = " ⭐PoM" if pd["is_motm"] else ""
             mult_str = f" (×{mult})" if mult > 1 else ""
             print(f"        {pname:<28} {final:>6.0f} pts  [raw {raw}{mult_str}]{motm}")
 

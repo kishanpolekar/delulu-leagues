@@ -243,7 +243,8 @@ function Standings({ teams, matches = [] }) {
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'center',
-                  height: '100%'
+                  height: '100%',
+                  background: 'rgba(17, 17, 34, 0.5)',
                 }}>
                   <span style={{ fontSize: '2.5rem' }}>{medal}</span>
                 </div>

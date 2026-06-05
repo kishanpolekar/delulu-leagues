@@ -61,23 +61,29 @@ class FantasyPointsCalculator:
     SR_PENALTY: int = -15  # For SR < 100 (minimum 3 balls, not out on zero)
     
     # Bowling points
-    WICKET_POINT: int = 30
+    WICKET_POINT: int = 40
     THREE_WICKET_HAUL_BONUS: int = 25
+    FOUR_WICKET_HAUL_BONUS: int = 35
     FIVE_WICKET_HAUL_BONUS: int = 50
+    SIX_WICKET_HAUL_BONUS: int = 75
     HATTRICK_BONUS: int = 45
-    MAIDEN_OVER_BONUS: int = 10
+    MAIDEN_OVER_BONUS: int = 20
     
     # Economy rate bonus thresholds
     ECON_BONUS: list[tuple[int, int, int]] = [
-        (0, 6, 25), (6, 7, 15), (7, 8, 10)
+        (0, 4, 50), (4, 5, 35), (5, 6, 25), (6, 7, 15), (7, 8, 10)
     ]
-    ECON_PENALTY: int = -10  # For economy >= 12
+    # Economy rate penalties thresholds
+    ECON_PENALTIES: list[tuple[int, int, int]] = [
+        (12, 14, -10), (14, 16, -15), (16, 20, -20)
+    ]
+    ECON_FINAL_PENALTY: int = -25  # For economy >= 20 (minimum 6 balls)
     
     # Fielding points
-    FIELDING_POINT: int = 20  # Any type of dismissal (catch, run-out, stumping)
+    FIELDING_POINT: int = 30  # Any type of dismissal (catch, run-out, stumping)
     
     # Bonuses
-    MOTM_BONUS: int = 25
+    POTM_BONUS: int = 50
     
     @classmethod
     def calculate_batting_points(cls, runs: int, balls: int, fours: int, sixes: int, 
@@ -178,7 +184,7 @@ class FantasyPointsCalculator:
         # Economy Rate Bonus (APPLICABLE for both Regular and Super Over)
         # Convert cricket overs to decimal to check minimum balls requirement
         decimal_overs: float = overs_to_decimal(overs)
-        if decimal_overs >= 0.5:  # Minimum 3 balls (0.5 decimal overs)
+        if decimal_overs >= 1.0:  # Minimum 6 balls (1.0 decimal overs)
             economy: float = runs_conceded / decimal_overs if decimal_overs > 0 else 0
             econ_applied: bool = False
             
@@ -189,9 +195,16 @@ class FantasyPointsCalculator:
                     econ_applied = True
                     break
             
-            if not econ_applied and economy >= 12:
-                points += cls.ECON_PENALTY
-                breakdown["econ_penalty"] = cls.ECON_PENALTY
+            for low, high, penalty in cls.ECON_PENALTIES:
+                if low <= economy < high:
+                    points += penalty
+                    breakdown[f"econ_{low}_{high}"] = penalty
+                    econ_applied = True
+                    break
+            
+            if not econ_applied and economy >= 20:
+                points += cls.ECON_FINAL_PENALTY
+                breakdown["econ_final_penalty"] = cls.ECON_FINAL_PENALTY
         
         return {"total": points, "breakdown": breakdown}
     
@@ -207,7 +220,7 @@ class FantasyPointsCalculator:
         """Calculate total fantasy points including Man of the Match bonus."""
         total: int = batting.get("total", 0) + bowling.get("total", 0) + fielding.get("total", 0)
         if is_motm:
-            total += cls.MOTM_BONUS
+            total += cls.POTM_BONUS
         return total
 
 
@@ -1255,7 +1268,7 @@ class WWCScorecard:
             
             total_points: int = total_batting + total_bowling + total_fielding
             if is_motm:
-                total_points += FantasyPointsCalculator.MOTM_BONUS
+                total_points += FantasyPointsCalculator.POTM_BONUS
             
             player_data["fantasy_points"] = total_points
             player_data["super_over_points"] = so_total

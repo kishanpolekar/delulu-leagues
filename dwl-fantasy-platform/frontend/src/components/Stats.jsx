@@ -11,7 +11,7 @@ import { countryAbbrToFullNames } from '../data/countryInfo';
 const teamBgColors = teamPrimaryColors
 
 // Team secondary color mapping
-const teamBorderColors = teamSecondaryColors
+const teamColors = teamSecondaryColors
 
 // Country abbreviation to full name mapping
 const countryNames = countryAbbrToFullNames
@@ -241,11 +241,11 @@ function Stats({ teams, players, matches, leaderMap, tournamentStats, setActiveT
                 <PlayerNameWithBadge name={p.name} captainVC={p.captainVC} leaderMap={leaderMap} />
                 <span style={{ 
                   fontSize: '0.7rem', 
-                  color: 'rgba(255,255,255,0.95)', 
+                  color: teamColors[p.team] || 'rgba(255,255,255,0.95)', 
                   background: teamBgColors[p.team] || '#f0f0f0', 
                   padding: '0.1rem 0.5rem', 
                   borderRadius: '2px',
-                  border: `2px solid ${teamBorderColors[p.team] || '#ccc'}`
+                  border: `2px solid ${teamColors[p.team] || '#ccc'}`
                 }}>
                   {teamNameToAbbr[p.team] || p.team || '??'}
                 </span>

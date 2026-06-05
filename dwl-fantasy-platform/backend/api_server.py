@@ -423,15 +423,13 @@ async def get_matches():
         
         # Calculate total points per team from match_entry (THIS IS KEY FOR STATS PAGE)
         team_points = {
-            'Andhra Capitals': 0,
             'Gully Divas': 0,
-            'Chennai Thunder': 0,
-            'Hyderabad Haramis': 0,
-            'Kutte Kamine Riders': 0,
-            'Kochi Tuskers': 0,
+            'Janaki Royals': 0,
             'Konkan Queens': 0,
-            'Nepali Rhinos': 0,
-            'Rajasthan Ragers': 0,
+            'Rajputana Ranis': 0,
+            'Sarafa Strikers': 0,
+            'Singara Singapengal': 0,
+            'Vanitha Warriors': 0,
         }
         for player, player_data in match_entry.items():
             team = player_data.get("dwl_team", "")
@@ -468,15 +466,13 @@ async def get_match_details(match_num: int):
     
     # Calculate team totals and collect player details
     team_points = {
-        'Andhra Capitals': 0,
         'Gully Divas': 0,
-        'Chennai Thunder': 0,
-        'Hyderabad Haramis': 0,
-        'Kutte Kamine Riders': 0,
-        'Kochi Tuskers': 0,
+        'Janaki Royals': 0,
         'Konkan Queens': 0,
-        'Nepali Rhinos': 0,
-        'Rajasthan Ragers': 0,
+        'Rajputana Ranis': 0,
+        'Sarafa Strikers': 0,
+        'Singara Singapengal': 0,
+        'Vanitha Warriors': 0,
     }
     player_details = []
     

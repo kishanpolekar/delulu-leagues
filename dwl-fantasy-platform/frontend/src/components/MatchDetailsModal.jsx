@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { XMarkIcon, TrophyIcon, UserIcon } from '@heroicons/react/24/outline';
-import { teamPrimaryColors } from '../data/teamColors';
+import { teamPrimaryColors, teamSecondaryColors } from '../data/teamColors';
 import { countryAbbrToFullNames } from '../data/countryInfo';
 
 
@@ -10,6 +10,9 @@ const countryNames = countryAbbrToFullNames
 
 // Team primary color mapping
 const teamBgColors = teamPrimaryColors
+
+// Team secondary color mapping
+const teamTextColors = teamSecondaryColors
 
 function MatchDetailsModal({ match, onClose }) {
   if (!match) return null;
@@ -205,7 +208,7 @@ function MatchDetailsModal({ match, onClose }) {
               return (
                 <div key={team} style={{ 
                   textAlign: 'center',
-                  width: '90px',
+                  width: '120px',
                   borderRadius: '8px',
                   overflow: 'hidden',
                   boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
@@ -223,8 +226,8 @@ function MatchDetailsModal({ match, onClose }) {
                   <div style={{ 
                     padding: '0.5rem 0.25rem',
                     background: teamBgColors[team] || '#667eea',
-                    fontSize: '0.65rem', 
-                    color: 'white', 
+                    fontSize: '0.9rem', 
+                    color: teamTextColors[team] || 'white', 
                     fontWeight: '600',
                     textTransform: 'uppercase',
                     letterSpacing: '0.3px',
@@ -239,7 +242,7 @@ function MatchDetailsModal({ match, onClose }) {
                   }}>
                     <div>{team}</div>
                     <div style={{ 
-                      fontSize: '0.55rem', 
+                      fontSize: '0.7rem', 
                       opacity: 0.85, 
                       marginTop: '0.25rem',
                       borderTop: '1px solid rgba(255,255,255,0.3)',
@@ -297,7 +300,7 @@ function MatchDetailsModal({ match, onClose }) {
                   <td style={{ padding: '0.75rem', color: '#ccc' }}>
                     <div>
                       <span style={{ fontWeight: '500' }}>{player.name}</span>
-                      {player.is_motm && <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: '#FFD700' }}>⭐ MoM</span>}
+                      {player.is_motm && <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: '#FFD700' }}>⭐ PoM</span>}
                     </div>
                   </td>
                   <td style={{ padding: '0.75rem', fontSize: '0.8rem', color: '#999' }}>{player.country || '-'}</td>
@@ -350,7 +353,7 @@ function MatchDetailsModal({ match, onClose }) {
                       <td style={{ padding: '0.75rem', color: '#ccc' }}>
                         <div>
                           <span style={{ fontWeight: '500' }}>{player.name}</span>
-                          {player.is_motm && <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: '#FFD700' }}>⭐ MoM</span>}
+                          {player.is_motm && <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: '#FFD700' }}>⭐ PoM</span>}
                         </div>
                       </td>
                       <td style={{ padding: '0.75rem', fontSize: '0.8rem', color: '#999' }}>{player.country || '-'}</td>

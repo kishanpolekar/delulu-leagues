@@ -3,12 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { XMarkIcon, UserIcon } from '@heroicons/react/24/outline';
 import PlayerNameWithBadge from './PlayerNameWithBadge';
 import { teamOwners } from '../data/teamOwners';
-import { teamPrimaryColors, teamEmojis } from '../data/teamColors';
+import { teamPrimaryColors, teamSecondaryColors, teamEmojis } from '../data/teamColors';
 import { countryAbbrToFullNames } from '../data/countryInfo';
 import { ChevronUpIcon, ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 // Team background color mapping
 const teamBgColors = teamPrimaryColors
+
+// Team secondary color mapping
+const teamTextColors = teamSecondaryColors
 
 // Country abbreviation to full name mapping
 const countryNames = countryAbbrToFullNames
@@ -440,7 +443,7 @@ function Teams({ teams, players, leaderMap }) {
                 </div>
                 
                 {/* Team Info */}
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, color: teamTextColors[selectedTeam.name] || 'white' }}>
                   <h2 style={{ margin: 0, fontSize: '1.5rem' }}>{selectedTeam.name}</h2>
                   <p style={{ margin: '0.5rem 0 0', opacity: 0.9 }}>
                     {selectedTeamPlayers.length} Players • {Math.round(selectedTeam.totalPoints || 0).toLocaleString()} Total Points
