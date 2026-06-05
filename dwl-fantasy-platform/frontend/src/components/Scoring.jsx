@@ -31,29 +31,36 @@ const SCORING_RULES = [
   {
     category: "Bowling",
     rules: [
-      { action: "Wicket", pts: "+30" },
+      { action: "Wicket", pts: "+40" },
       { action: "3-wicket haul", pts: "+25" },
+      { action: "4-wicket haul", pts: "+35" },
       { action: "5-wicket haul", pts: "+50" },
+      { action: "6-wicket haul", pts: "+75" },
       { action: "Hat-trick", pts: "+45" },
-      { action: "Maiden over", pts: "+10" },
-      { action: "Economy rate 0-5.99", pts: "+25" },
+      { action: "Maiden over", pts: "+20" },
+      { action: "Economy rate 0-3.99", pts: "+50" },
+      { action: "Economy rate 4-4.99", pts: "+35" },
+      { action: "Economy rate 5-5.99", pts: "+25" },
       { action: "Economy rate 6-6.99", pts: "+15" },
       { action: "Economy rate 7-7.99", pts: "+10" },
-      { action: "Economy rate 12+", pts: "−10" },
+      { action: "Economy rate 12-13.99", pts: "−10" },
+      { action: "Economy rate 14-15.99", pts: "−15" },
+      { action: "Economy rate 16-19.99", pts: "−20" },
+      { action: "Economy rate 20+", pts: "−25" },
     ]
   },
   {
     category: "Fielding",
     rules: [
-      { action: "Catch", pts: "+20" },
-      { action: "Run out", pts: "+20" },
-      { action: "Stumping", pts: "+20" },
+      { action: "Catch", pts: "+30" },
+      { action: "Run out", pts: "+30" },
+      { action: "Stumping", pts: "+30" },
     ]
   },
   {
     category: "Bonuses",
     rules: [
-      { action: "Player of the Match", pts: "+25" },
+      { action: "Player of the Match", pts: "+50" },
       { action: "Captain (multiplier)", pts: "×2" },
       { action: "Vice-Captain (multiplier)", pts: "×1.5" },
     ]
