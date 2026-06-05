@@ -11,19 +11,123 @@ echo "   DWL Fantasy League Platform"
 echo "========================================"
 echo ""
 
+# Function to detect OS
+detect_os() {
+    case "$(uname -s)" in
+        Linux*)     echo "Linux";;
+        Darwin*)    echo "MacOS";;
+        CYGWIN*|MINGW*|MSYS*) echo "Windows";;
+        *)          echo "Unknown";;
+    esac
+}
+
+# Function to provide installation instructions
+provide_instructions() {
+    local software=$1
+    local os=$(detect_os)
+    
+    echo -e "${YELLOW}Easy installation options for $software:${NC}"
+    
+    case $software in
+        "Python")
+            if [[ "$os" == "MacOS" ]]; then
+                echo "  • Using Homebrew: brew install python@3.12"
+                echo "  • Download from: https://python.org"
+            elif [[ "$os" == "Linux" ]]; then
+                echo "  • Ubuntu/Debian: sudo apt update && sudo apt install python3 python3-pip"
+                echo "  • RHEL/Fedora: sudo dnf install python3"
+                echo "  • Arch Linux: sudo pacman -S python"
+            elif [[ "$os" == "Windows" ]]; then
+                echo "  • Using winget: winget install Python.Python.3.12"
+                echo "  • Using Chocolatey: choco install python"
+                echo "  • Download from: https://python.org (✓ Check 'Add Python to PATH')"
+            fi
+            ;;
+        "Node.js")
+            if [[ "$os" == "MacOS" ]]; then
+                echo "  • Using Homebrew: brew install node@20"
+                echo "  • Download LTS from: https://nodejs.org"
+            elif [[ "$os" == "Linux" ]]; then
+                echo "  • Using NodeSource (Ubuntu/Debian):"
+                echo "    curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo bash -"
+                echo "    sudo apt install -y nodejs"
+                echo "  • RHEL/Fedora: sudo dnf install nodejs"
+                echo "  • Arch Linux: sudo pacman -S nodejs npm"
+            elif [[ "$os" == "Windows" ]]; then
+                echo "  • Using winget: winget install OpenJS.NodeJS.LTS"
+                echo "  • Using Chocolatey: choco install nodejs-lts"
+                echo "  • Download LTS from: https://nodejs.org"
+            fi
+            ;;
+    esac
+}
+
+# Function to attempt automatic installation on supported platforms
+auto_install() {
+    local software=$1
+    local os=$(detect_os)
+    
+    if [[ "$os" == "MacOS" ]] && command -v brew &> /dev/null; then
+        echo -e "${YELLOW}Attempting to install $software via Homebrew...${NC}"
+        if [[ "$software" == "Python" ]]; then
+            brew install python@3.12
+        else
+            brew install node@20
+        fi
+        return $?
+    elif [[ "$os" == "Linux" ]] && command -v apt &> /dev/null; then
+        echo -e "${YELLOW}Attempting to install $software via apt...${NC}"
+        if [[ "$software" == "Python" ]]; then
+            sudo apt update && sudo apt install -y python3 python3-pip
+        else
+            curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo bash -
+            sudo apt install -y nodejs
+        fi
+        return $?
+    else
+        return 1
+    fi
+}
+
 # Check if Python is installed
 if ! command -v python3 &> /dev/null; then
     echo -e "${RED}[ERROR] Python 3 is not installed${NC}"
-    echo "Please install Python 3.9+ from https://python.org"
+    echo ""
+    
+    # Try auto-installation (uncomment if you want auto-install)
+    # if auto_install "Python"; then
+    #     echo -e "${GREEN}✓ Python installed successfully!${NC}"
+    # else
+        provide_instructions "Python"
+        echo -e "${BLUE}After installation, restart your terminal and run this script again.${NC}"
+    # fi
+    
     exit 1
+else
+    PYTHON_VERSION=$(python3 --version 2>&1)
+    echo -e "${GREEN}✓ $PYTHON_VERSION is installed${NC}"
 fi
 
 # Check if Node.js is installed
 if ! command -v node &> /dev/null; then
     echo -e "${RED}[ERROR] Node.js is not installed${NC}"
-    echo "Please install Node.js from https://nodejs.org"
+    echo ""
+    
+    # Try auto-installation (uncomment if you want auto-install)
+    # if auto_install "Node.js"; then
+    #     echo -e "${GREEN}✓ Node.js installed successfully!${NC}"
+    # else
+        provide_instructions "Node.js"
+        echo -e "${BLUE}After installation, restart your terminal and run this script again.${NC}"
+    # fi
+    
     exit 1
+else
+    NODE_VERSION=$(node --version 2>&1)
+    echo -e "${GREEN}✓ Node.js $NODE_VERSION is installed${NC}"
 fi
+
+echo -e "${GREEN}✅ All dependencies are satisfied!${NC}"
 
 echo -e "${GREEN}[INFO] Starting Backend Server...${NC}"
 cd backend

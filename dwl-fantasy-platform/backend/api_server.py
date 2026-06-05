@@ -581,13 +581,6 @@ async def fetch_match(request: MatchRequest):
             debug=False
         )
 
-        try:
-            os.makedirs("espn_names_match", exist_ok=True)
-            # Extract ESPN names for analysis
-            extract_espn_names(sc.get_full_scorecard(), f"espn_names_match/match_{request.match_num}.txt")
-        except Exception as espn_error:
-            print(f"⚠️ Warning: Could not save ESPN names match: {espn_error}")
-        
         match_entry = result["match_entry"]
         team1_country = result["team1_country"]
         team2_country = result["team2_country"]
@@ -595,6 +588,15 @@ async def fetch_match(request: MatchRequest):
         
         # Save to JSON
         match_history = load_match_data(DATA_FILE)
+        
+        # Check if duplicate match exists BEFORE adding to history
+        if info_str in json.dumps(match_history):
+            print(f"⚠️ Match already exists. Not adding duplicate entry.")
+            raise HTTPException(
+                status_code=409, 
+                detail="Match already exists in history. Duplicate entry not added."
+            )
+        
         match_history[request.match_num] = {
             "match_entry": match_entry,
             "team1_country": team1_country,
@@ -603,6 +605,14 @@ async def fetch_match(request: MatchRequest):
             "match_title": info_str
         }
         save_match_data(match_history, DATA_FILE)
+
+        try:
+            os.makedirs("espn_names_match", exist_ok=True)
+            # Extract ESPN names for analysis
+            extract_espn_names(sc.get_full_scorecard(), f"espn_names_match/match_{request.match_num}.txt")
+        except Exception as espn_error:
+            print(f"⚠️ Warning: Could not save ESPN names match: {espn_error}")
+        
         
         # ========== Update Excel file ==========
         excel_path = "DWL_Scores.xlsx"

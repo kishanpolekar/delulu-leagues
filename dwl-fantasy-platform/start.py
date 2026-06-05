@@ -35,23 +35,110 @@ def main():
     print_colored("=" * 50, 'green')
     print()
     
+    def install_with_winget(package_name, display_name):
+        """Attempt to install using Windows Package Manager"""
+        if platform.system() == "Windows":
+            try:
+                print_colored(f"Attempting to install {display_name} using winget...", 'yellow')
+                result = subprocess.run(['winget', 'install', package_name, '--accept-package-agreements'], 
+                                    capture_output=True, text=True)
+                if result.returncode == 0:
+                    print_colored(f"✓ {display_name} installed successfully!", 'green')
+                    return True
+                else:
+                    print_colored(f"✗ Failed to install {display_name} via winget", 'red')
+                    return False
+            except FileNotFoundError:
+                print_colored("winget not found (Windows 10/11 should have it)", 'yellow')
+                return False
+        return False
+
+    def provide_install_instructions(software, url, package_name, winget_command):
+        """Provide installation instructions"""
+        print_colored(f"\n📦 To install {software} easily:", 'cyan')
+        print(f"  • Download from: {url}")
+        
+        if platform.system() == "Windows":
+            print(f"  • Using winget (Windows 10/11): {winget_command}")
+            print(f"  • Using Chocolatey: choco install {package_name}")
+        elif platform.system() == "Darwin":  # macOS
+            print(f"  • Using Homebrew: brew install {package_name}")
+        elif platform.system() == "Linux":
+            if package_name == "python":
+                print(f"  • Ubuntu/Debian: sudo apt install python3 python3-pip")
+                print(f"  • RHEL/Fedora: sudo dnf install python3")
+            else:  # node
+                print(f"  • Ubuntu/Debian: curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo bash - && sudo apt install nodejs")
+                print(f"  • RHEL/Fedora: sudo dnf install nodejs")
+
     # Check Python
     try:
         subprocess.run([sys.executable, '--version'], capture_output=True, check=True)
+        print_colored("✓ Python is installed", 'green')
     except:
         print_colored("[ERROR] Python is not installed or not in PATH", 'red')
-        print_colored("Please install Python 3.9+ from https://python.org", 'yellow')
-        input("Press Enter to exit...")
-        sys.exit(1)
-    
+        
+        # Try automatic installation on Windows
+        if platform.system() == "Windows":
+            if install_with_winget("Python.Python.3.12", "Python"):
+                # Re-check after installation
+                try:
+                    subprocess.run([sys.executable, '--version'], capture_output=True, check=True)
+                    print_colored("✓ Python installed and working!", 'green')
+                except:
+                    print_colored("⚠️ Please restart your terminal and run this script again", 'yellow')
+                    input("Press Enter to exit...")
+                    sys.exit(1)
+            else:
+                provide_install_instructions("Python", "https://python.org", "python", "winget install Python.Python.3.12")
+                print_colored("\n⚠️ IMPORTANT: Check 'Add Python to PATH' during installation!", 'yellow')
+                input("\nPress Enter after installing Python...")
+                # Re-check
+                try:
+                    subprocess.run([sys.executable, '--version'], capture_output=True, check=True)
+                    print_colored("✓ Great! Python is now installed.", 'green')
+                except:
+                    print_colored("Still can't find Python. Please restart your terminal and try again.", 'red')
+                    sys.exit(1)
+        else:
+            provide_install_instructions("Python", "https://python.org", "python", "winget install Python.Python.3.12")
+            input("\nPress Enter to exit...")
+            sys.exit(1)
+
     # Check Node.js
     try:
         subprocess.run(['node', '--version'], capture_output=True, check=True)
+        print_colored("✓ Node.js is installed", 'green')
     except:
         print_colored("[ERROR] Node.js is not installed or not in PATH", 'red')
-        print_colored("Please install Node.js from https://nodejs.org", 'yellow')
-        input("Press Enter to exit...")
-        sys.exit(1)
+        
+        # Try automatic installation on Windows
+        if platform.system() == "Windows":
+            if install_with_winget("OpenJS.NodeJS.LTS", "Node.js"):
+                # Re-check after installation
+                try:
+                    subprocess.run(['node', '--version'], capture_output=True, check=True)
+                    print_colored("✓ Node.js installed and working!", 'green')
+                except:
+                    print_colored("⚠️ Please restart your terminal and run this script again", 'yellow')
+                    input("Press Enter to exit...")
+                    sys.exit(1)
+            else:
+                provide_install_instructions("Node.js", "https://nodejs.org", "nodejs", "winget install OpenJS.NodeJS.LTS")
+                input("\nPress Enter after installing Node.js...")
+                # Re-check
+                try:
+                    subprocess.run(['node', '--version'], capture_output=True, check=True)
+                    print_colored("✓ Great! Node.js is now installed.", 'green')
+                except:
+                    print_colored("Still can't find Node.js. Please restart your terminal and try again.", 'red')
+                    sys.exit(1)
+        else:
+            provide_install_instructions("Node.js", "https://nodejs.org", "nodejs", "winget install OpenJS.NodeJS.LTS")
+            input("\nPress Enter to exit...")
+            sys.exit(1)
+
+    print_colored("\n✓ All dependencies are installed!", 'green')
     
     processes = []
     
