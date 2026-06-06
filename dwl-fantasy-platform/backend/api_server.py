@@ -5,6 +5,7 @@ Run with: python api_server.py
 """
 
 import json
+import io
 import os
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
@@ -12,8 +13,9 @@ from datetime import datetime
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import Response, FileResponse
 from pydantic import BaseModel
+from supabase import create_client, Client
 import uvicorn
 import pandas as pd
 
@@ -63,6 +65,25 @@ lockout_state = load_lockout_state()
 CONFIG_PATH = "WWC_Config.xlsx"
 DATA_FILE = "wwc_match_data.json"
 EXCEL_OUTPUT_FILE = "DWL_Scores.xlsx"
+
+
+BUCKET_NAME = "excel-files"
+EXCEL_FILE_PATH = "DWL_Scores.xlsx"  # Path within the bucket
+
+# Configure Supabase client
+supabase_client: Client = None
+def get_supabase_client() -> Client:
+    """Initialize and return the Supabase client."""
+    global supabase_client
+    if supabase_client is None:
+        url = os.getenv("SUPABASE_URL")
+        key = os.getenv("SUPABASE_KEY")
+        if not url or not key:
+            print("⚠️ SUPABASE_URL or SUPABASE_KEY not set. Supabase features will be unavailable.")
+            return None
+        supabase_client = create_client(url, key)
+    print("ℹ️ SUPABASE client connected. (api_server)")
+    return supabase_client
 
 
 @asynccontextmanager
@@ -627,8 +648,12 @@ async def fetch_match(request: MatchRequest):
         
         
         # ========== Update Excel file ==========
-        excel_path = "DWL_Scores.xlsx"
-        print(f"📝 Updating Excel file: {excel_path}")
+        
+        print(f"📝 Updating Excel file: {os.path.abspath(EXCEL_FILE_PATH)}")
+
+        sb_client = get_supabase_client()
+        if not sb_client:
+            return
         
         try:
             # Load existing match history
@@ -643,7 +668,8 @@ async def fetch_match(request: MatchRequest):
             
             # Generate fresh Excel file with all matches
             generate_excel(
-                excel_path,
+                sb_client,
+                EXCEL_FILE_PATH,
                 teams_abbr,
                 rosters,
                 capt_vc,
@@ -652,7 +678,6 @@ async def fetch_match(request: MatchRequest):
                 name_to_abbr,
                 player_country
             )
-            print(f"✅ Excel file updated successfully: {os.path.abspath(excel_path)}")
         except Exception as excel_error:
             print(f"⚠️ Warning: Could not update Excel file: {excel_error}")
         # ========== END Excel update ==========
@@ -704,21 +729,28 @@ async def fetch_match(request: MatchRequest):
 
 @app.get("/api/download-excel")
 async def download_excel():
-    """Download the DWL_Scores.xlsx file"""
-    excel_path = "DWL_Scores.xlsx"
+    """Download the DWL_Scores.xlsx file from Supabase Storage"""
+
+    sb_client = get_supabase_client()
+    if not sb_client:
+        return
     
-    # Print current working directory to see where Python is looking
-    print("Current working directory:", os.getcwd())
-    print("Looking for excel file to download at:", Path(excel_path).absolute())
-    print(f"Found excel file '{excel_path}'?:", Path(excel_path).absolute().exists())
-    if not Path(excel_path).absolute().exists():
-        raise HTTPException(status_code=404, detail="Excel file not found")
-    
-    return FileResponse(
-        excel_path,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        filename="DWL_Scores.xlsx"
-    )
+    try:
+        # Download from Supabase Storage
+        response = sb_client.storage.from_(BUCKET_NAME).download(EXCEL_FILE_PATH)
+        
+        # Return as file download
+        return Response(
+            content=response,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=DWL_Scores.xlsx"}
+        )
+    except Exception as e:
+        print(f"❌ Error downloading from Supabase: {e}")
+        raise HTTPException(
+            status_code=404, 
+            detail="Excel file not found. Generate it first by running the update process."
+        )
 
 
 @app.get("/api/espn-match-info/{match_num}")

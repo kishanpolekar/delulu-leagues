@@ -21,6 +21,7 @@ First-time setup:
 
 import argparse
 import asyncio
+import io
 import os
 import re
 import sys
@@ -54,8 +55,11 @@ def get_supabase_client() -> Client:
             print("⚠️ SUPABASE_URL or SUPABASE_KEY not set. Supabase features will be unavailable.")
             return None
         supabase_client = create_client(url, key)
-    print("ℹ️ SUPABASE client connected.")
+    print("ℹ️ SUPABASE client connected. (pipeline)")
     return supabase_client
+
+BUCKET_NAME = "excel-files"
+EXCEL_FILE_PATH = "DWL_Scores.xlsx"  # Path within the bucket
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SUPABASE DATA STORAGE
@@ -951,7 +955,8 @@ def write_standings_sheet(ws, standings, all_match_nums):
 
 
 def generate_excel(
-    output_path: str,
+    sb_client,  # Supabase client for storage operations
+    output_path: str,  # Keep parameter but will save to Supabase instead
     teams_abbr: dict,
     rosters: dict,
     capt_vc: dict,
@@ -960,7 +965,7 @@ def generate_excel(
     name_to_abbr: dict,
     player_country: dict,
 ):
-    """Generate or update Excel file from match_history."""
+    """Generate or update Excel file and save to Supabase Storage."""
     wb = Workbook()
     wb.remove(wb.active)
     
@@ -983,7 +988,32 @@ def generate_excel(
     ws_s = wb.create_sheet(title="Standings", index=0)
     write_standings_sheet(ws_s, standings, all_match_nums)
     
-    wb.save(output_path)
+    # Save to bytes instead of disk
+    excel_bytes = io.BytesIO()
+    wb.save(excel_bytes)
+    excel_bytes.seek(0)
+
+    # First, try to remove existing file if it exists
+    try:
+        sb_client.storage.from_(BUCKET_NAME).remove([EXCEL_FILE_PATH])
+        print(f"Removed existing file: {EXCEL_FILE_PATH}")
+    except:
+        pass  # File doesn't exist, that's fine
+    
+    # Upload to Supabase Storage
+    try:
+        sb_client.storage.from_(BUCKET_NAME).upload(
+            EXCEL_FILE_PATH, 
+            excel_bytes.getvalue(),
+        )
+        print(f"✅ Excel file saved to Supabase Storage: {BUCKET_NAME}/{EXCEL_FILE_PATH}")
+    except Exception as e:
+        print(f"❌ Error uploading to Supabase: {e}")
+        # Fallback: save locally for development
+        local_path = "DWL_Scores.xlsx"
+        wb.save(local_path)
+        print(f"⚠️ Saved locally as {local_path}")
+    
     return standings
 
 
@@ -1108,8 +1138,11 @@ async def run(args):
             return
 
     print(f"\n📝 Writing Excel → {output_file} ...")
+    sb_client = get_supabase_client()
+    if not sb_client:
+        return
     standings = generate_excel(
-        output_file, teams_abbr, rosters, capt_vc,
+        sb_client, output_file, teams_abbr, rosters, capt_vc,
         match_history, all_match_nums, name_to_abbr, player_country,
     )
 
