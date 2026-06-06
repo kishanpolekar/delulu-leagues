@@ -11,6 +11,13 @@ const teamColors = teamSecondaryColors
 
 const defaultColor = '#333333';
 
+const downloadDisabled = (matches) => {
+  if (!matches || matches.length === 0) {
+    return true;
+  }
+  return false;
+};
+
 const getTeamMatchPoints = (teamName, matches) => {
   const matchPoints = [];
   
@@ -152,13 +159,13 @@ function Standings({ teams, matches = [] }) {
           <h2 className="card-title" style={{ fontSize: '2.3rem', margin: 0 }}>POINTS TABLE</h2>
           <button
             onClick={handleDownloadExcel}
-            disabled={downloading}
+            disabled={downloadDisabled(matches) || downloading}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
               padding: '0.6rem 1.2rem',
-              background: downloading ? '#6c757d' : 'linear-gradient(135deg, #28a745, #20c997)',
+              background: (downloadDisabled(matches) || downloading) ? '#6c757d' : 'linear-gradient(135deg, #28a745, #20c997)',
               border: 'none',
               borderRadius: '8px',
               color: 'white',
