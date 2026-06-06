@@ -690,19 +690,6 @@ class WWCScorecard:
                 so_stumpings: int = player_data["super_over_fielding"]["stumpings"]
                 if catches > 0 or run_outs > 0 or stumpings > 0 or so_catches > 0 or so_run_outs > 0 or so_stumpings > 0:
                     print(f"  {full_name} ({player_data.get('team', '?')}): C={catches}, RO={run_outs}, St={stumpings} | SO: C={so_catches}, RO={so_run_outs}, St={so_stumpings}")
-            
-        # Mark impact sub roles
-        for team_abbr, subs in self.impact_subs.items():
-            for subbed_in in subs.get("subbed_in", []):
-                for player in self.players.values():
-                    if player["team"] == team_abbr and (player["full_name"] == subbed_in or player["short_name"] == subbed_in):
-                        player["impact_role"] = "subbed_in"
-                        break
-            for subbed_out in subs.get("subbed_out", []):
-                for player in self.players.values():
-                    if player["team"] == team_abbr and (player["full_name"] == subbed_out or player["short_name"] == subbed_out):
-                        player["impact_role"] = "subbed_out"
-                        break
     
     def _extract_fielder_name(self, fielder_text: str) -> str:
         """Extract actual fielder name from fielderText."""

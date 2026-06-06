@@ -480,7 +480,13 @@ async def get_match_details(match_num: int):
         country = player_data.get("country", "")
         final_pts = player_data.get("final_pts", 0)
         raw_pts = player_data.get("pts", 0)
+        raw_batting_pts = player_data.get("raw_batting_pts", 0)
+        raw_bowling_pts = player_data.get("raw_bowling_pts", 0)
+        raw_fielding_pts = player_data.get("raw_fielding_pts", 0)
         super_over_pts = player_data.get("super_over_pts", 0)
+        so_batting_pts = player_data.get("so_batting_pts", 0)
+        so_bowling_pts = player_data.get("so_bowling_pts", 0)
+        so_fielding_pts = player_data.get("so_fielding_pts", 0)
         is_motm = player_data.get("is_motm", False)
         stats = player_data.get("_stats", {})
         
@@ -494,7 +500,13 @@ async def get_match_details(match_num: int):
             "dwl_team": dwl_team,
             "points": round(final_pts, 1),
             "raw_points": round(raw_pts, 1),
+            "raw_batting_pts": round(raw_batting_pts, 1),
+            "raw_bowling_pts": round(raw_bowling_pts, 1),
+            "raw_fielding_pts": round(raw_fielding_pts, 1),
             "super_over_pts": round(super_over_pts,1),
+            "so_batting_pts": round(so_batting_pts, 1),
+            "so_bowling_pts": round(so_bowling_pts, 1),
+            "so_fielding_pts": round(so_fielding_pts, 1),
             "is_motm": is_motm,
             "runs": stats.get("runs", 0),
             "balls": stats.get("balls", 0),
@@ -586,7 +598,7 @@ async def fetch_match(request: MatchRequest):
         team2_country = result["team2_country"]
         match_winner = result["match_winner"]
         
-        # Save to JSON
+        # Save to Supabase
         match_history = load_match_data(DATA_FILE)
         
         # Check if duplicate match exists BEFORE adding to history

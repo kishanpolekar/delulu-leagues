@@ -59,7 +59,7 @@ The DWL Fantasy League Platform is a comprehensive solution for running fantasy 
 - 👑 **Captain/VC Multipliers** - 2x for captain, 1.5x for vice-captain
 - 🏏 **Super Over Support** - Handles one-over eliminators separately
 - 📁 **Excel Configuration** - Easy team and player management via Excel
-- 💾 **Persistent Storage** - JSON-based match history storage
+- 💾 **Persistent Storage** - Supabase-based match history storage
 - 🎯 **Smart Player Matching** - Uses ESPN's longName and fieldingName fields
 - 🔐 **Admin Password Protection** - Secure access for adding matches
 - 📈 **Tournament Statistics** - Most runs, most wickets, highest strike rate, best economy

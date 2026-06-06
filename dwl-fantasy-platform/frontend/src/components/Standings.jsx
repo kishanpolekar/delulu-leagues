@@ -36,7 +36,7 @@ const getTeamMatchPoints = (teamName, matches) => {
         }
       }
     }
-    // Option 3: Using match_entry (from your JSON storage)
+    // Option 3: Using match_entry (from your Supabase storage)
     else if (match.match_entry) {
       for (const [player, playerData] of Object.entries(match.match_entry)) {
         if (playerData.dwl_team === teamName) {

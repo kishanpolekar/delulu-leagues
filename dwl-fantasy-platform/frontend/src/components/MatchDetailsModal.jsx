@@ -309,12 +309,21 @@ function MatchDetailsModal({ match, onClose }) {
                   <td style={{ padding: '0.75rem', fontSize: '0.8rem', color: '#999' }}>{player.dwl_team || '-'}</td>
                   <td style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.85rem', color: '#ccc' }}>
                     {player.balls > 0 ? `${player.runs} (${player.balls})` : '-'}
+                    <div style={{ fontSize: '0.6rem', fontWeight: 'normal', color: '#888', marginTop: '0.25rem' }}>
+                      {player.raw_batting_pts} pts
+                    </div>
                   </td>
                   <td style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.85rem', color: '#ccc' }}>
                     {player.overs > 0 ? `${player.wickets}/${player.runs_conceded} (${player.overs})` : '-'}
+                    <div style={{ fontSize: '0.6rem', fontWeight: 'normal', color: '#888', marginTop: '0.25rem' }}>
+                      {player.raw_bowling_pts} pts
+                    </div>
                   </td>
                   <td style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.85rem', color: '#ccc' }}>
                     {player.catches > 0 ? `${player.catches} | ` : '- |'} {player.run_outs > 0 ? `${player.run_outs} | ` : '- |'} {player.stumpings > 0 ? `${player.stumpings}` : '-'}
+                    <div style={{ fontSize: '0.6rem', fontWeight: 'normal', color: '#888', marginTop: '0.25rem' }}>
+                      {player.raw_fielding_pts} pts
+                    </div>
                   </td>
                   <td style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 'bold', color: player.raw_points > 0 ? '#28a745' : (player.raw_points < 0 ? '#FF4444' : '#adb5bd') }}>
                     {player.raw_points}
@@ -362,12 +371,21 @@ function MatchDetailsModal({ match, onClose }) {
                       <td style={{ padding: '0.75rem', fontSize: '0.8rem', color: '#999' }}>{player.dwl_team || '-'}</td>
                       <td style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.85rem', color: '#ccc' }}>
                         {player.so_balls > 0 ? `${player.so_runs} (${player.so_balls})` : '-'}
+                        <div style={{ fontSize: '0.6rem', fontWeight: 'normal', color: '#888', marginTop: '0.25rem' }}>
+                          {player.so_batting_pts} pts
+                        </div>
                       </td>
                       <td style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.85rem', color: '#ccc' }}>
                         {player.so_overs > 0 ? `${player.so_wickets}/${player.so_runs_conceded} (${player.so_overs})` : '-'}
+                        <div style={{ fontSize: '0.6rem', fontWeight: 'normal', color: '#888', marginTop: '0.25rem' }}>
+                          {player.so_bowling_pts} pts
+                        </div>
                       </td>
                       <td style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.85rem', color: '#ccc' }}>
                         {player.so_catches > 0 ? `${player.so_catches} | ` : '- |'} {player.so_run_outs > 0 ? `${player.so_run_outs} | ` : '- |'} {player.so_stumpings > 0 ? `${player.so_stumpings}` : '-'}
+                        <div style={{ fontSize: '0.6rem', fontWeight: 'normal', color: '#888', marginTop: '0.25rem' }}>
+                          {player.so_fielding_pts} pts
+                        </div>
                       </td>
                       <td style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 'bold', color: '#FFD700' }}>
                         {player.super_over_pts || 0}

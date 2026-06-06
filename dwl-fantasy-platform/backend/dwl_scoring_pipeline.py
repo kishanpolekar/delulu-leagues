@@ -21,7 +21,6 @@ First-time setup:
 
 import argparse
 import asyncio
-import json
 import os
 import re
 import sys
@@ -59,7 +58,7 @@ def get_supabase_client() -> Client:
     return supabase_client
 
 # ─────────────────────────────────────────────────────────────────────────────
-# JSON DATA STORAGE
+# SUPABASE DATA STORAGE
 # ─────────────────────────────────────────────────────────────────────────────
 
 def save_match_data(match_history: dict, data_file: str = None) -> None:
@@ -231,72 +230,79 @@ def match_player_to_roster(
     return None
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# SCORING
-# ─────────────────────────────────────────────────────────────────────────────
+# # ─────────────────────────────────────────────────────────────────────────────
+# # SCORING
+# # ─────────────────────────────────────────────────────────────────────────────
 
-SR_TIERS = [
-    (150, 175, 5), (175, 200, 10), (200, 225, 15), (225, 250, 20),
-    (250, 275, 25), (275, 300, 30), (300, 325, 35), (325, 350, 40),
-    (350, 600, 45), (600, 9999, 50),
-]
-ECON_TIERS = [(0, 6, 25), (6, 7, 15), (7, 8, 10)]
-
-
-def calc_batting_pts(runs, balls, fours, sixes, is_out, dismissal=""):
-    pts = 0
-    if runs > 0:
-        pts += runs + fours + sixes * 2
-    if balls >= 3:
-        sr = (runs / balls) * 100
-        for lo, hi, bonus in SR_TIERS:
-            if lo <= sr < hi:
-                pts += bonus
-                break
-        else:
-            if sr < 100 and not (runs == 0 and is_out):
-                pts -= 15
-    if runs >= 150:
-        pts += 75
-    elif runs >= 100:
-        pts += 50
-    elif runs >= 50:
-        pts += 25
-    if runs == 0 and is_out:
-        pts += -35 if balls == 0 else (-25 if balls == 1 else -15)
-    return pts
+# SR_TIERS = [
+#     (150, 175, 5), (175, 200, 10), (200, 225, 15), (225, 250, 20),
+#     (250, 275, 25), (275, 300, 30), (300, 325, 35), (325, 350, 40),
+#     (350, 600, 45), (600, 9999, 50),
+# ]
+# ECON_TIERS = [
+#     (0, 4, 50), (4, 5, 35), (5, 6, 25), (6, 7, 15), (7, 8, 10),
+#     (12, 14, -10), (14, 16, -15), (16, 20, -20)
+#     ]
 
 
-def _overs_to_decimal(overs: float) -> float:
-    whole = int(overs)
-    extra_balls = round((overs - whole) * 10)
-    return (whole * 6 + extra_balls) / 6
+# def calc_batting_pts(runs, balls, fours, sixes, is_out):
+#     pts = 0
+#     if runs > 0:
+#         pts += runs + fours + sixes * 2
+#     if balls >= 3:
+#         sr = (runs / balls) * 100
+#         for lo, hi, bonus in SR_TIERS:
+#             if lo <= sr < hi:
+#                 pts += bonus
+#                 break
+#         else:
+#             if sr < 100 and not (runs == 0 and is_out):
+#                 pts -= 15
+#     if runs >= 150:
+#         pts += 75
+#     elif runs >= 100:
+#         pts += 50
+#     elif runs >= 50:
+#         pts += 25
+#     if runs == 0 and is_out:
+#         pts += -35 if balls == 0 else (-25 if balls == 1 else -15)
+#     return pts
 
 
-def calc_bowling_pts(overs, maidens, runs_c, wickets, has_hattrick=False):
-    pts = wickets * 30
-    if wickets >= 3:
-        pts += 25
-    if wickets >= 5:
-        pts += 50
-    if has_hattrick:
-        pts += 45
-    pts += maidens * 10
-    dec = _overs_to_decimal(overs)
-    if dec >= 0.5:
-        econ = runs_c / dec
-        for lo, hi, bonus in ECON_TIERS:
-            if lo <= econ < hi:
-                pts += bonus
-                break
-        else:
-            if econ >= 12:
-                pts -= 10
-    return pts
+# def _overs_to_decimal(overs: float) -> float:
+#     whole = int(overs)
+#     extra_balls = round((overs - whole) * 10)
+#     return (whole * 6 + extra_balls) / 6
 
 
-def calc_fielding_pts(catches, run_outs, stumpings):
-    return (catches + run_outs + stumpings) * 20
+# def calc_bowling_pts(overs, maidens, runs_c, wickets, has_hattrick=False):
+#     pts = wickets * 40
+#     if wickets >= 6:
+#         pts += 75
+#     elif wickets >= 5:
+#         pts += 50
+#     elif wickets >= 4:
+#         pts += 35
+#     elif wickets >= 3:
+#         pts += 25
+#     if has_hattrick:
+#         pts += 45
+#     pts += maidens * 20
+#     dec = _overs_to_decimal(overs)
+#     if dec >= 1.0:
+#         econ = runs_c / dec
+#         for lo, hi, bonus in ECON_TIERS:
+#             if lo <= econ < hi:
+#                 pts += bonus
+#                 break
+#         else:
+#             if econ >= 20:
+#                 pts -= 25
+#     return pts
+
+
+# def calc_fielding_pts(catches, run_outs, stumpings):
+#     return (catches + run_outs + stumpings) * 30
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -553,6 +559,15 @@ def process_scorecard(
                 print(f"DEBUG: Skipping {full_name} ({short_name}) - no contribution")
             continue
 
+        # Use category points from the fetcher if available
+        reg_batting_pts = p.get("reg_batting", 0)
+        reg_bowling_pts = p.get("reg_bowling", 0)
+        reg_fielding_pts = p.get("reg_fielding", 0)
+
+        so_batting_pts = p.get("so_batting", 0)
+        so_bowling_pts = p.get("so_bowling", 0)
+        so_fielding_pts = p.get("so_fielding", 0)
+
         # Use pre-calculated points from the fetcher
         raw_pts = p.get("fantasy_points", 0)
         regular_pts = p.get("regular_points", 0)
@@ -584,7 +599,13 @@ def process_scorecard(
         match_entry[canon] = {
             "pts": raw_pts,
             "regular_pts": regular_pts,
+            "regular_batting_pts": reg_batting_pts,
+            "regular_bowling_pts": reg_bowling_pts,
+            "regular_fielding_pts": reg_fielding_pts,
             "super_over_pts": so_pts,
+            "so_batting_pts": so_batting_pts,
+            "so_bowling_pts": so_bowling_pts,
+            "so_fielding_pts": so_fielding_pts,
             "final_pts": raw_pts * mult,
             "is_motm": is_motm,
             "dwl_team": team_name,
@@ -1007,11 +1028,11 @@ async def run(args):
     print(f"📖 Loading DWL config from {config_file} ...")
     (
         teams_abbr, rosters, player_team, capt_vc,
-        dwl_lookup, abbr_to_name, name_to_abbr, all_roster_names,
+        dwl_lookup, abbr_to_name, name_to_abbr,
         player_country, country_wicketkeepers,
     ) = read_dwl_config(config_file, debug=args.debug)
 
-    # Load existing match data from JSON
+    # Load existing match data from Supabase
     match_history = load_match_data(data_file)
     all_match_nums = sorted(match_history.keys())
     
@@ -1068,7 +1089,7 @@ async def run(args):
             print("\n📊 DWL points breakdown for this match:")
             print_match_summary(match_entry, teams_abbr, name_to_abbr, player_team)
 
-            # Update history and save to JSON
+            # Update history and save to Supabase
             match_history[match_num] = {
                 "match_entry": match_entry,
                 "team1_country": team1_country,
