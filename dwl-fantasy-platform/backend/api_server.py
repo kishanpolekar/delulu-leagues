@@ -652,14 +652,14 @@ async def fetch_match(request: MatchRequest):
                 name_to_abbr,
                 player_country
             )
-            print(f"✅ Excel file updated successfully: {excel_path}")
+            print(f"✅ Excel file updated successfully: {os.path.abspath(excel_path)}")
         except Exception as excel_error:
             print(f"⚠️ Warning: Could not update Excel file: {excel_error}")
         # ========== END Excel update ==========
         
         # ========== Save ESPN match info to separate file ==========
         espn_info_path = f"espn_match_info/match_{request.match_num}.json"
-        print(f"💾 Saving ESPN match info to: {espn_info_path}")
+        print(f"💾 Saving ESPN match info to: {os.path.abspath(espn_info_path)}")
         
         try:
             # Create directory if it doesn't exist
