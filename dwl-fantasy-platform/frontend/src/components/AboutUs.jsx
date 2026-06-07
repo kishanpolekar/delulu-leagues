@@ -99,8 +99,8 @@ function AboutUs() {
       \n\n \
       Rooted in pride. Built for the crown.\n \
       AMCHO KONKAN. AMCHYO RANIYO.",
-      image: getOwnerPic("sd").imagePath,
-      alt: "S.D."
+      image: getOwnerPic("sjd").imagePath,
+      alt: "S.J.D."
     }
   ];
 
