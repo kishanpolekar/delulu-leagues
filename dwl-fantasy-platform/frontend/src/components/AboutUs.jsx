@@ -15,8 +15,7 @@ function AboutUs() {
     const filename = name
     .toLowerCase()
     .replace(/[^a-z\s]/g, '')   // Remove non-alphabetic characters (keeps spaces)
-    .replace(/\s+/g, '-')       // Replace spaces with hyphens
-    .replace(/-+/g, '-');       // Remove duplicate hyphens
+    .replace(/\s+/g, '')       // Replace spaces
     const imagePath = `/owners/${filename}.jpeg`;
     return { imagePath, altText: name };
   };
@@ -24,7 +23,7 @@ function AboutUs() {
   // About the 7 league owners
   const rows = [
     {
-      title: "Asrayram Gopalakrishnan",
+      title: "A.G.",
       description: "Introducing the owner of Singara Singapengal — Asrayram. \
       \n\n \
       Tamil Nadu thala energy, bold cricket pride, and full owner swagger. Singara Singapengal \
@@ -32,11 +31,11 @@ function AboutUs() {
       \n\n \
       Thalai nambi, thaanai nadathu.\n \
       Singara Singapengal are ready to roar.",
-      image: getOwnerPic("Asrayram Gopalakrishnan").imagePath,
-      alt: "Asrayram Gopalakrishnan"
+      image: getOwnerPic("ag").imagePath,
+      alt: "A.G."
     },
     {
-      title: "Barghavi Varadarajan",
+      title: "B.V.",
       description: "Introducing the owner of Gully Divas — Barghavi. \
       \n\n \
       Bangalore energy, gully confidence, and founder mindset all in one. \
@@ -44,55 +43,55 @@ function AboutUs() {
       \n\n \
       BENGALURINA HUDUGI. GULLYGALU RANI.\n \
       The Divas are here. The game better be ready.",
-      image: getOwnerPic("Barghavi Varadarajan").imagePath,
-      alt: "Barghavi Varadarajan"
+      image: getOwnerPic("bv").imagePath,
+      alt: "B.V."
     },
     {
-      title: "Kishan Polekar",
+      title: "K.P.",
       description: "Introducing the owner of Sarafa Strikers — Kishan. \
       \n\n \
       Straight from the heart of Indore, Sarafa Strikers bring streetlight energy, \
       fearless cricket, and full auction-table aggression. This team is built to strike first and strike hard. \
       \n\n \
       Runs, wickets, points — everything is on the menu.\nSarafa Strikers are ready.",
-      image: getOwnerPic("Kishan Polekar").imagePath,
-      alt: "Kishan Polekar"
+      image: getOwnerPic("kp").imagePath,
+      alt: "K.P."
     },
     {
-      title: "Kridish Uprety",
+      title: "K.U.",
       description: "Introducing the owner of Janaki Royals — Kridish. \
       \n\n \
       Royal mindset. Calm confidence. Big auction energy. Janaki Royals enter \
       DWL Season One with legacy, pride, and a squad-building vision made for the crown. \
       \n\n \
       The Royals don’t just play the game.\nThey rule it.",
-      image: getOwnerPic("Kridish Uprety").imagePath,
-      alt: "Kridish Uprety"
+      image: getOwnerPic("ku").imagePath,
+      alt: "K.U."
     },
     {
-      title: "Nikhil Satheesan",
+      title: "N.S.",
       description: "Introducing the owner of Vanitha Warriors — Nikhil. \
       \n\n \
       Kerala pride, warrior spirit, and calm leadership. Vanitha Warriors step into DWL Season One \
       with strength, discipline, and a squad ready to fight for every run, wicket, and point. \
       \n\n \
       Strength. Grace. Victory.\nThe Warriors are ready for battle.",
-      image: getOwnerPic("Nikhil Satheesan").imagePath,
-      alt: "Nikhil Satheesan"
+      image: getOwnerPic("ns").imagePath,
+      alt: "N.S."
     },
     {
-      title: "Nimesh Bhatia",
+      title: "N.B.",
       description: "Introducing the owner of Rajputana Ranis — Nimesh. \
       \n\n \
       Royal style, sharp strategy, and palace-level confidence. Rajputana Ranis enter DWL Season One \
       with grace, power, and a mission to make every match feel like a statement.  \
       \n\n \
       Play with pride. Rule with grace.\nThe Ranis are here.",
-      image: getOwnerPic("Nimesh Bhatia").imagePath,
-      alt: "Nimesh Bhatia"
+      image: getOwnerPic("nb").imagePath,
+      alt: "N.B."
     },
     {
-      title: "Sam D'Souza",
+      title: "S.D.",
       description: "Introducing the owner of Konkan Queens — Sam. \
       \n\n \
       Coastal pride, calm strategy, and a champion’s mindset. Konkan Queens are stepping into DWL Season One \
@@ -100,8 +99,8 @@ function AboutUs() {
       \n\n \
       Rooted in pride. Built for the crown.\n \
       AMCHO KONKAN. AMCHYO RANIYO.",
-      image: getOwnerPic("Sam D'Souza").imagePath,
-      alt: "Sam D'Souza"
+      image: getOwnerPic("sd").imagePath,
+      alt: "S.D."
     }
   ];
 
