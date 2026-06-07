@@ -86,11 +86,17 @@ function Players({ players, onRefresh }) {
           bVal = b.points || 0;
       }
       
+      // Primary sort by selected field
       if (sortDirection === 'asc') {
-        return aVal > bVal ? 1 : -1;
+        if (aVal !== bVal) return aVal > bVal ? 1 : -1;
       } else {
-        return aVal < bVal ? 1 : -1;
+        if (aVal !== bVal) return aVal < bVal ? 1 : -1;
       }
+      
+      // Secondary sort: Always sort by name alphabetically when values are equal
+      const nameA = a.name || '';
+      const nameB = b.name || '';
+      return nameA > nameB ? 1 : -1;
     });
 
     return filtered;
