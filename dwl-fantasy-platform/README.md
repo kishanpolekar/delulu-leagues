@@ -629,13 +629,13 @@ dwl-fantasy-platform/
 │   │   │   ├── singara-singapengal.png
 │   │   │   └── vanitha-warriors.png
 │   │   ├── owners
-│   │   │   ├── asrayram-gopalakrishnan.jpeg
-│   │   │   ├── barghavi-varadarajan.jpeg
-│   │   │   ├── kishan-polekar.jpeg
-│   │   │   ├── kridish-uprety.jpeg
-│   │   │   ├── nikhil-satheesan.jpeg
-│   │   │   ├── nimesh-bhatia.jpeg
-│   │   │   └── sam-dsouza.jpeg
+│   │   │   ├── ag.jpeg
+│   │   │   ├── bv.jpeg
+│   │   │   ├── kp.jpeg
+│   │   │   ├── ku.jpeg
+│   │   │   ├── nb.jpeg
+│   │   │   ├── ns.jpeg
+│   │   │   └── sjd.jpeg
 │   │   └── teams-ai.jpeg
 │   ├── setup_frontend.sh
 │   ├── src
