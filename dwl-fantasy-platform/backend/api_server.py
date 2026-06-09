@@ -34,9 +34,9 @@ config_loaded = False
 load_dotenv()
 
 # Admin password from environment variable
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "default_password_change_me")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "SimplePass123")
 MAX_FAILED_ATTEMPTS = int(os.getenv("MAX_FAILED_ATTEMPTS", "3"))
-LOCKOUT_DURATION_MINUTES = int(os.getenv("LOCKOUT_DURATION_MINUTES", "30"))
+LOCKOUT_DURATION_MINUTES = int(os.getenv("LOCKOUT_DURATION_MINUTES", "5"))
 LOCKOUT_DURATION_SECONDS = LOCKOUT_DURATION_MINUTES * 60
 
 # Admin lockout state (store in memory with persistence)
@@ -66,15 +66,23 @@ CONFIG_PATH = "WWC_Config.xlsx"
 DATA_FILE = "wwc_match_data.json"
 EXCEL_OUTPUT_FILE = "DWL_Scores.xlsx"
 
-
+# Storage configuration
+STORAGE_MODE = os.getenv("STORAGE_MODE", "local").lower()
 BUCKET_NAME = "excel-files"
 EXCEL_FILE_PATH = "DWL_Scores.xlsx"  # Path within the bucket
+
+def is_production_mode() -> bool:
+    """Check if running in production mode with Supabase storage."""
+    return STORAGE_MODE == "production"
 
 # Configure Supabase client
 supabase_client: Client = None
 def get_supabase_client() -> Client:
     """Initialize and return the Supabase client."""
     global supabase_client
+    if not is_production_mode():
+        return None
+    
     if supabase_client is None:
         url = os.getenv("SUPABASE_URL")
         key = os.getenv("SUPABASE_KEY")
@@ -82,7 +90,7 @@ def get_supabase_client() -> Client:
             print("⚠️ SUPABASE_URL or SUPABASE_KEY not set. Supabase features will be unavailable.")
             return None
         supabase_client = create_client(url, key)
-    print("ℹ️ SUPABASE client connected. (api_server)")
+        print("ℹ️ PROD: SUPABASE client connected. (api_server)")
     return supabase_client
 
 
@@ -649,17 +657,22 @@ async def fetch_match(request: MatchRequest):
         
         # ========== Update Excel file ==========
         
-        print(f"📝 Updating Excel file: {os.path.abspath(EXCEL_FILE_PATH)}")
+        print(f"📝 Updating Excel file...")
 
-        sb_client = get_supabase_client()
-        if not sb_client:
-            return
+        use_supabase = is_production_mode()
+        print(f"   Storage mode: {'PRODUCTION (Supabase)' if use_supabase else 'LOCAL (file)'}")
+
+        if use_supabase:
+            sb_client = get_supabase_client()
+            if not sb_client:
+                raise HTTPException(status_code=503, detail="Supabase client not available")
         
         try:
             # Load existing match history
             all_match_nums = sorted(match_history.keys())
             
-            # Get teams data
+            # Get teams data for Excel generation
+            # Note: generate_excel now takes use_supabase parameter to decide where to save the file
             teams_abbr = teams_data.get("teams_abbr", {})
             rosters = teams_data.get("rosters", {})
             capt_vc = teams_data.get("capt_vc", {})
@@ -676,7 +689,8 @@ async def fetch_match(request: MatchRequest):
                 match_history,
                 all_match_nums,
                 name_to_abbr,
-                player_country
+                player_country,
+                use_supabase=use_supabase
             )
         except Exception as excel_error:
             print(f"⚠️ Warning: Could not update Excel file: {excel_error}")
@@ -729,27 +743,45 @@ async def fetch_match(request: MatchRequest):
 
 @app.get("/api/download-excel")
 async def download_excel():
-    """Download the DWL_Scores.xlsx file from Supabase Storage"""
+    """Download the DWL_Scores.xlsx file - from Supabase or local based on mode."""
 
-    sb_client = get_supabase_client()
-    if not sb_client:
-        return
+    if is_production_mode():
+        # Production mode: Download from Supabase Storage
+        sb_client = get_supabase_client()
+        if not sb_client:
+            raise HTTPException(status_code=503, detail="Supabase client not available")
     
-    try:
-        # Download from Supabase Storage
-        response = sb_client.storage.from_(BUCKET_NAME).download(EXCEL_FILE_PATH)
+        try:
+            # Download from Supabase Storage
+            response = sb_client.storage.from_(BUCKET_NAME).download(EXCEL_FILE_PATH)
+            
+            # Return as file download
+            return Response(
+                content=response,
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                headers={"Content-Disposition": "attachment; filename=DWL_Scores.xlsx"}
+            )
+        except Exception as e:
+            print(f"❌ Error downloading from Supabase: {e}")
+            raise HTTPException(
+                status_code=404, 
+                detail="Excel file not found in Supabase. Generate it first by running the update process."
+            )
+    else:
+        # Local mode: Read from local file
+        excel_path = "DWL_Scores.xlsx"
         
-        # Return as file download
-        return Response(
-            content=response,
+        print("Current working directory:", os.getcwd())
+        print("Looking for excel file at:", Path(excel_path).absolute())
+        print(f"Found excel file? {Path(excel_path).absolute().exists()}")
+        
+        if not Path(excel_path).absolute().exists():
+            raise HTTPException(status_code=404, detail="Excel file not found locally")
+        
+        return FileResponse(
+            excel_path,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": "attachment; filename=DWL_Scores.xlsx"}
-        )
-    except Exception as e:
-        print(f"❌ Error downloading from Supabase: {e}")
-        raise HTTPException(
-            status_code=404, 
-            detail="Excel file not found. Generate it first by running the update process."
+            filename="DWL_Scores.xlsx"
         )
 
 
@@ -785,6 +817,17 @@ async def get_standings():
         })
     
     return standings
+
+
+@app.get("/api/storage-mode")
+async def get_storage_mode():
+    """Get current storage mode (local/production)."""
+    mode = "local" if STORAGE_MODE == "local" else "production"
+    return {
+        "mode": mode,
+        "is_local": mode == "local",
+        "is_production": mode == "production"
+    }
 
 
 async def load_config():

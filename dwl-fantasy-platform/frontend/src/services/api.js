@@ -93,6 +93,17 @@ export async function downloadExcel() {
   }
 }
 
+export const getStorageMode = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/storage-mode`);
+    if (!response.ok) throw new Error('Failed to fetch storage mode');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching storage mode:', error);
+    return { mode: 'unknown', is_local: false, is_production: false };
+  }
+};
+
 export async function getAdminConfig() {
   const response = await api.get('/admin-config');
   return response.data;

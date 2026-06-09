@@ -16,7 +16,7 @@ from playwright.async_api import async_playwright
 # CONSTANTS
 # ============================================================================
 
-WWC_SERIES_ID: int = 1432420 # WWC 2026 Series ID - CHANGE THIS FOR DIFFERENT SEASONS 1483859
+WWC_SERIES_ID: int = 1483859 # WWC 2026 Series ID - CHANGE THIS FOR DIFFERENT SEASONS
 
 
 # ============================================================================

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   HomeIcon,
   TrophyIcon,
@@ -10,6 +10,7 @@ import {
   ChartBarIcon,
   CogIcon
 } from '@heroicons/react/24/outline';
+import { getStorageMode } from '../services/api';
 
 const navItems = [
   { id: 'dashboard', label: '', icon: HomeIcon },
@@ -26,6 +27,17 @@ const navItems = [
 function Navbar({ activeTab, setActiveTab }) {
   const [imageError, setImageError] = React.useState(false);
 
+  const [isLocalMode, setIsLocalMode] = useState(false);
+
+  // Fetch storage mode on component mount
+  useEffect(() => {
+    const fetchStorageMode = async () => {
+      const mode = await getStorageMode();
+      setIsLocalMode(mode.is_local);
+    };
+    fetchStorageMode();
+  }, []);
+
   return (
     <nav style={{
       background: 'rgba(0, 0, 0, 0.9)',
@@ -40,7 +52,7 @@ function Navbar({ activeTab, setActiveTab }) {
         {/* Clickable Logo */}
         <div 
           onClick={() => setActiveTab('dashboard')} 
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '1rem' }}
         >
           {!imageError ? (
             <img 
@@ -61,6 +73,21 @@ function Navbar({ activeTab, setActiveTab }) {
               backgroundClip: 'text', 
               color: 'transparent' 
             }}>🏏 DWL</span>
+          )}
+
+          {/* Storage Mode Indicator - Only shows in local mode */}
+          {isLocalMode && (
+            <div style={{
+              background: '#dc3545',
+              color: 'white',
+              padding: '0.3rem 0.8rem',
+              borderRadius: '20px',
+              fontSize: '0.7rem',
+              fontWeight: 'bold',
+              whiteSpace: 'nowrap'
+            }}>
+              🔧 LOCAL DEV
+            </div>
           )}
         </div>
         

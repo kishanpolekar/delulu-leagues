@@ -13,7 +13,7 @@ Required file:
     WWC_Config.xlsx   -- Single Excel file with all configuration:
                         - Sheet "DWLTeams": DWL team abbreviations and names
                         - Sheet "Players": Player names, Roles, DWL teams, Country
-                        - Sheet "KKR", "AC", etc.: Team-specific captain/VC info
+                        - Sheet "GD", "JR", etc.: Team-specific captain/VC info
 First-time setup:
     pip install playwright pandas openpyxl
     playwright install webkit
@@ -22,6 +22,7 @@ First-time setup:
 import argparse
 import asyncio
 import io
+import json
 import os
 import re
 import sys
@@ -42,12 +43,24 @@ except ImportError:
     print("❌ Could not import wwc_fantasy.py — make sure it's in the same directory.")
     sys.exit(1)
 
+# Storage configuration
+STORAGE_MODE = os.getenv("STORAGE_MODE", "local").lower()
+BUCKET_NAME = "excel-files"
+EXCEL_FILE_PATH = "DWL_Scores.xlsx"  # Path within the bucket
+
+def is_production_mode() -> bool:
+    """Check if running in production mode with Supabase storage."""
+    return STORAGE_MODE == "production"
+
 
 # Configure Supabase client
 supabase_client: Client = None
 def get_supabase_client() -> Client:
-    """Initialize and return the Supabase client."""
+    """Initialize and return the Supabase client.  (only in production mode)."""
     global supabase_client
+    if not is_production_mode():
+        return None
+    
     if supabase_client is None:
         url = os.getenv("SUPABASE_URL")
         key = os.getenv("SUPABASE_KEY")
@@ -55,66 +68,104 @@ def get_supabase_client() -> Client:
             print("⚠️ SUPABASE_URL or SUPABASE_KEY not set. Supabase features will be unavailable.")
             return None
         supabase_client = create_client(url, key)
-    print("ℹ️ SUPABASE client connected. (pipeline)")
+        print("ℹ️ PROD: SUPABASE client connected. (pipeline)")
     return supabase_client
-
-BUCKET_NAME = "excel-files"
-EXCEL_FILE_PATH = "DWL_Scores.xlsx"  # Path within the bucket
-
 # ─────────────────────────────────────────────────────────────────────────────
-# SUPABASE DATA STORAGE
+# DATA STORAGE - LOCAL OR SUPABASE UPLOAD/DOWNLOAD
 # ─────────────────────────────────────────────────────────────────────────────
 
 def save_match_data(match_history: dict, data_file: str = None) -> None:
-    """Save match data to Supabase using upsert."""
-    sb_client = get_supabase_client()
-    if not sb_client:
-        return
+    """Save match data to Supabase (production) or local file (local) using upsert."""
+
+    if is_production_mode():
+        print("Saving match data to Supabase...")
+        sb_client = get_supabase_client()
+        if not sb_client:
+            return
     
-    try:
-        # Convert the dictionary of matches into a list of dicts for Supabase
-        matches_to_upsert = []
-        for match_num, match_data in match_history.items():
-            # We need to include the match_num as a column for the upsert to work
-            match_record = {**match_data, "match_num": match_num}
-            matches_to_upsert.append(match_record)
-        
-        # Perform upsert (update if exists, insert if new)
-        # The `on_conflict="match_num"` tells PostgreSQL to update the existing row
-        # if a match with the same `match_num` already exists.
-        response = sb_client.table("matches").upsert(
-            matches_to_upsert, 
-            on_conflict="match_num"
-        ).execute()
-        
-        if hasattr(response, 'error') and response.error:
-            print(f"Supabase upsert error: {response.error}")
-        else:
-            print(f"✅ Saved {len(matches_to_upsert)} match entries to Supabase")
-    except Exception as e:
-        print(f"Error saving match data to Supabase: {e}")
+        try:
+            # Convert the dictionary of matches into a list of dicts for Supabase
+            matches_to_upsert = []
+            for match_num, match_data in match_history.items():
+                # We need to include the match_num as a column for the upsert to work
+                match_record = {**match_data, "match_num": match_num}
+                matches_to_upsert.append(match_record)
+            
+            # Perform upsert (update if exists, insert if new)
+            # The `on_conflict="match_num"` tells PostgreSQL to update the existing row
+            # if a match with the same `match_num` already exists.
+            response = sb_client.table("matches").upsert(
+                matches_to_upsert, 
+                on_conflict="match_num"
+            ).execute()
+            
+            if hasattr(response, 'error') and response.error:
+                print(f"Supabase upsert error: {response.error}")
+            else:
+                print(f"✅ Saved {len(matches_to_upsert)} match entries to Supabase")
+        except Exception as e:
+            print(f"Error saving match data to Supabase: {e}")
+    else:
+        # Local mode - save to JSON file
+        print("Saving match data to Local file:...")
+        print(f"   Path: {os.path.abspath(data_file)}")
+        if data_file:
+            serializable = {}
+            for mn, match_data in match_history.items():
+                serializable[str(mn)] = {
+                    "match_entry": match_data.get("match_entry", {}),
+                    "team1_country": match_data.get("team1_country", ""),
+                    "team2_country": match_data.get("team2_country", ""),
+                    "match_winner": match_data.get("match_winner", ""),
+                    "match_title": match_data.get("match_title", "")
+                }
+            with open(data_file, 'w') as f:
+                json.dump(serializable, f, indent=2)
 
 
-def load_match_data(data_file: str) -> dict:
-    """Load match data from Supabase."""
-    sb_client = get_supabase_client()
-    if not sb_client:
-        return {}
-    
-    try:
-        response = sb_client.table("matches").select("*").execute()
-        if response.data:
-            # Convert the list of matches from Supabase back to the dictionary format
-            # your app expects: { match_num: { ...match_data } }
-            match_dict = {}
-            for match in response.data:
-                match_num = match.pop("match_num")
-                match_dict[match_num] = match
-            return match_dict
-        else:
+def load_match_data(data_file: str = "wwc_match_data.json") -> dict:
+    """Load match data from Supabase (production) or local JSON file (local)."""
+    if is_production_mode():
+        # Production mode - read from Supabase table
+
+        print("Loading match data from Supabase...")
+        sb_client = get_supabase_client()
+        if not sb_client:
             return {}
-    except Exception as e:
-        print(f"Error loading match data from Supabase: {e}")
+    
+        try:
+            response = sb_client.table("matches").select("*").execute()
+            if response.data:
+                # Convert the list of matches from Supabase back to the dictionary format
+                # your app expects: { match_num: { ...match_data } }
+                match_dict = {}
+                for match in response.data:
+                    match_num = match.pop("match_num")
+                    match_dict[match_num] = match
+                return match_dict
+            return {}
+        except Exception as e:
+            print(f"Error loading match data from Supabase: {e}")
+            return {}
+    else:
+        # Local mode - read from JSON file
+
+        print("Loading match data from Local file:...")
+        print(f"   Path: {os.path.abspath(data_file)}")
+        if Path(data_file).exists():
+            with open(data_file, 'r') as f:
+                data = json.load(f)
+            match_history = {}
+            for mn_str, match_data in data.items():
+                mn = int(mn_str)
+                match_history[mn] = {
+                    "match_entry": match_data.get("match_entry", {}),
+                    "team1_country": match_data.get("team1_country", ""),
+                    "team2_country": match_data.get("team2_country", ""),
+                    "match_winner": match_data.get("match_winner", ""),
+                    "match_title": match_data.get("match_title", "")
+                }
+            return match_history
         return {}
 
 
@@ -956,16 +1007,16 @@ def write_standings_sheet(ws, standings, all_match_nums):
 
 def generate_excel(
     sb_client,  # Supabase client for storage operations
-    output_path: str,  # Keep parameter but will save to Supabase instead
+    output_path: str,
     teams_abbr: dict,
     rosters: dict,
     capt_vc: dict,
     match_history: dict,
     all_match_nums: list,
-    name_to_abbr: dict,
     player_country: dict,
+    use_supabase: bool = False,
 ):
-    """Generate or update Excel file and save to Supabase Storage."""
+    """Generate or update Excel file - saves locally or to Supabase based on mode."""
     wb = Workbook()
     wb.remove(wb.active)
     
@@ -988,31 +1039,43 @@ def generate_excel(
     ws_s = wb.create_sheet(title="Standings", index=0)
     write_standings_sheet(ws_s, standings, all_match_nums)
     
-    # Save to bytes instead of disk
-    excel_bytes = io.BytesIO()
-    wb.save(excel_bytes)
-    excel_bytes.seek(0)
+    if use_supabase and is_production_mode():
+        # Save to Supabase Storage
+        try:
+            # Save to bytes instead of disk
+            excel_bytes = io.BytesIO()
+            wb.save(excel_bytes)
+            excel_bytes.seek(0)
 
-    # First, try to remove existing file if it exists
-    try:
-        sb_client.storage.from_(BUCKET_NAME).remove([EXCEL_FILE_PATH])
-        print(f"Removed existing file: {EXCEL_FILE_PATH}")
-    except:
-        pass  # File doesn't exist, that's fine
+            if sb_client:
+                # First, try to remove existing file if it exists
+                try:
+                    sb_client.storage.from_(BUCKET_NAME).remove([EXCEL_FILE_PATH])
+                    print(f"Removed existing file: {EXCEL_FILE_PATH}")
+                except:
+                    pass  # File doesn't exist, that's fine
     
-    # Upload to Supabase Storage
-    try:
-        sb_client.storage.from_(BUCKET_NAME).upload(
-            EXCEL_FILE_PATH, 
-            excel_bytes.getvalue(),
-        )
-        print(f"✅ Excel file saved to Supabase Storage: {BUCKET_NAME}/{EXCEL_FILE_PATH}")
-    except Exception as e:
-        print(f"❌ Error uploading to Supabase: {e}")
-        # Fallback: save locally for development
-        local_path = "DWL_Scores.xlsx"
-        wb.save(local_path)
-        print(f"⚠️ Saved locally as {local_path}")
+                # Upload to Supabase Storage
+                sb_client.storage.from_(BUCKET_NAME).upload(
+                    EXCEL_FILE_PATH, 
+                    excel_bytes.getvalue(),
+                )
+                print(f"✅ Excel file saved to Supabase Storage: {BUCKET_NAME}/{EXCEL_FILE_PATH}")
+            else:
+                # Fallback to local
+                wb.save(output_path)
+                print(f"⚠️ Supabase unavailable - saved locally as {os.path.abspath(output_path)}")
+        except Exception as e:
+            print(f"❌ Error uploading to Supabase: {e}")
+            # Fallback: save locally for development
+            local_path = "DWL_Scores.xlsx"
+            wb.save(local_path)
+            print(f"⚠️ Saved locally as {local_path}")
+        else:
+            # Save locally
+            wb.save(output_path)
+            abs_path = os.path.abspath(output_path)
+            print(f"✅ Excel file saved locally: {abs_path}")
     
     return standings
 
@@ -1138,12 +1201,17 @@ async def run(args):
             return
 
     print(f"\n📝 Writing Excel → {output_file} ...")
+
+    # Determine storage mode
+    use_supabase = is_production_mode()
+    print(f"   Storage mode: {'PRODUCTION (Supabase)' if use_supabase else 'LOCAL (file)'}")
+    
     sb_client = get_supabase_client()
     if not sb_client:
         return
     standings = generate_excel(
         sb_client, output_file, teams_abbr, rosters, capt_vc,
-        match_history, all_match_nums, name_to_abbr, player_country,
+        match_history, all_match_nums, player_country, use_supabase=use_supabase,
     )
 
     print("\n🏆 Current Standings:")
