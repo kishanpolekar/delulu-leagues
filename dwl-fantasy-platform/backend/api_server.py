@@ -662,6 +662,7 @@ async def fetch_match(request: MatchRequest):
         use_supabase = is_production_mode()
         print(f"   Storage mode: {'PRODUCTION (Supabase)' if use_supabase else 'LOCAL (file)'}")
 
+        sb_client: Client | None = None
         if use_supabase:
             sb_client = get_supabase_client()
             if not sb_client:
@@ -681,14 +682,13 @@ async def fetch_match(request: MatchRequest):
             
             # Generate fresh Excel file with all matches
             generate_excel(
-                sb_client,
+                sb_client if sb_client else None,
                 EXCEL_FILE_PATH,
                 teams_abbr,
                 rosters,
                 capt_vc,
                 match_history,
                 all_match_nums,
-                name_to_abbr,
                 player_country,
                 use_supabase=use_supabase
             )

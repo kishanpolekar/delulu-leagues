@@ -1006,7 +1006,7 @@ def write_standings_sheet(ws, standings, all_match_nums):
 
 
 def generate_excel(
-    sb_client,  # Supabase client for storage operations
+    sb_client: Client | None,  # Supabase client for storage operations
     output_path: str,
     teams_abbr: dict,
     rosters: dict,
@@ -1071,11 +1071,11 @@ def generate_excel(
             local_path = "DWL_Scores.xlsx"
             wb.save(local_path)
             print(f"⚠️ Saved locally as {local_path}")
-        else:
-            # Save locally
-            wb.save(output_path)
-            abs_path = os.path.abspath(output_path)
-            print(f"✅ Excel file saved locally: {abs_path}")
+    else:
+        # Save locally
+        wb.save(output_path)
+        abs_path = os.path.abspath(output_path)
+        print(f"✅ Excel file saved locally: {abs_path}")
     
     return standings
 

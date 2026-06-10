@@ -533,7 +533,7 @@ function Teams({ teams, players, leaderMap }) {
                       </th>
                       <th style={{ padding: '0.75rem 1rem', textAlign: 'center', color: '#e0e0e0', cursor: 'pointer' }} onClick={() => handleSort('soldPrice')}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
-                          Sold Price {getSortIcon('soldPrice')}
+                          Sold Price (Crore) {getSortIcon('soldPrice')}
                         </div>
                       </th>
                       <th style={{ padding: '0.75rem 1rem', textAlign: 'center', color: '#e0e0e0', cursor: 'pointer' }} onClick={() => handleSort('points')}>
