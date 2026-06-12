@@ -571,6 +571,7 @@ def process_scorecard(
         maidens = sum(b.get("maidens", 0) or 0 for b in bowl_list)
         runs_c = sum(b.get("runs", 0) or 0 for b in bowl_list)
         wickets = sum(b.get("wickets", 0) or 0 for b in bowl_list)
+        has_hattrick = any(b.get("has_hattrick", False) for b in bowl_list)
 
         fielding = p.get("fielding", {})
         catches = fielding.get("catches", 0)
@@ -667,7 +668,7 @@ def process_scorecard(
             "country": country,
             "_stats": dict(
                 runs=runs, balls=balls, fours=fours, sixes=sixes,
-                overs=overs, maidens=maidens, runs_c=runs_c, wickets=wickets,
+                overs=overs, maidens=maidens, runs_c=runs_c, wickets=wickets, has_hattrick=has_hattrick,
                 catches=catches, run_outs=run_outs, stumpings=stumpings,
                 so_runs=so_runs, so_balls=so_balls, so_fours=so_fours, so_sixes=so_sixes,
                 so_overs=so_overs, so_maidens=so_maidens, so_runs_c=so_runs_c, so_wickets=so_wickets,

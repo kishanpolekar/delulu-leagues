@@ -4,6 +4,7 @@ venv/
 *.pyc
 
 # Data files
+warmups/
 wwc_match_data.json
 espn_match_info/
 espn_names_match

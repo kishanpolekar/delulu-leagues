@@ -164,9 +164,15 @@ class FantasyPointsCalculator:
         
         # Wicket haul bonus (NOT APPLICABLE for Super Over)
         if not is_super_over:
-            if wickets >= 5:
+            if wickets >= 6:
+                points += cls.SIX_WICKET_HAUL_BONUS
+                breakdown["6_wicket_haul"] = cls.SIX_WICKET_HAUL_BONUS
+            elif wickets >= 5:
                 points += cls.FIVE_WICKET_HAUL_BONUS
                 breakdown["5_wicket_haul"] = cls.FIVE_WICKET_HAUL_BONUS
+            elif wickets >= 4:
+                points += cls.FOUR_WICKET_HAUL_BONUS
+                breakdown["4_wicket_haul"] = cls.FOUR_WICKET_HAUL_BONUS
             elif wickets >= 3:
                 points += cls.THREE_WICKET_HAUL_BONUS
                 breakdown["3_wicket_haul"] = cls.THREE_WICKET_HAUL_BONUS
@@ -675,9 +681,14 @@ class WWCScorecard:
         # Process Super Over stats if present
         if self.has_super_over:
             self._process_super_over_stats()
+
+         # ========== NEW: Detect hat-tricks from notes ==========
+        hat_tricks = self._detect_hattricks_from_notes()
+        if self.debug and hat_tricks:
+            print(f"DEBUG: Hat-tricks detected: {hat_tricks}")
         
         self._add_fielding_stats()
-        self._calculate_fantasy_points()
+        self._calculate_fantasy_points(hat_tricks)
         
         if self.debug:
             print("\nDEBUG: Players with fielding stats:")
@@ -1137,9 +1148,104 @@ class WWCScorecard:
                                         self.players[matched_player]["fielding"]["run_outs"] += 1
                                     else:
                                         self._create_temporary_player(raw_name, fielding_team)
+
+
+    def _detect_hattricks_from_notes(self) -> dict[str, bool]:
+        """
+        Parse the notes section to detect hat-tricks.
+        
+        Looks for patterns like:
+        "Nandani Sharma took a hat-trick with the wickets of 8-209 (Ahuja, 19.4 ov), 9-209 (Gayakwad, 19.5 ov), 10-209 (Renuka Singh, 19.6 ov)"
+        
+        Returns:
+            Dictionary mapping bowler full name -> boolean (True if they took a hat-trick)
+        """
+        hat_tricks = {}
+        
+        # Get the notes from raw_data
+        notes_data = self.raw_data.get("content", {}).get("notes", {})
+        groups = notes_data.get("groups", [])
+        
+        # Pattern to match hat-trick announcement
+        # Format: "<player_name> took a hat-trick with the wickets of ..."
+        hat_trick_pattern = re.compile(
+            r'([A-Za-z\s]+)\s+took\s+a\s+hat-trick',
+            re.IGNORECASE
+        )
+        
+        for group in groups:
+            notes = group.get("notes", [])
+            for note in notes:
+                match = hat_trick_pattern.search(note)
+                if match:
+                    bowler_name = match.group(1).strip()
+                    
+                    # Try to match the bowler name to a player in our roster
+                    # The name in notes might be short name (e.g., "Nandani Sharma")
+                    # We need to find the full name in our players
+                    matched_player = self._find_player_by_name(bowler_name)
+                    
+                    if matched_player:
+                        hat_tricks[matched_player] = True
+                        if self.debug:
+                            print(f"DEBUG: Hat-trick detected for {matched_player} (from note: {bowler_name})")
+                    else:
+                        # Store by the name from notes, we'll try to match later
+                        hat_tricks[bowler_name] = True
+                        if self.debug:
+                            print(f"DEBUG: Hat-trick detected for {bowler_name} (not yet matched to roster)")
+        
+        return hat_tricks
+
+    def _find_player_by_name(self, name: str) -> str | None:
+        """
+        Find a player in self.players by partial name matching.
+        
+        Args:
+            name: Player name from notes (e.g., "Nandani Sharma")
+        
+        Returns:
+            Full player name if found, None otherwise
+        """
+        if not name:
+            return None
+        
+        name_lower = name.lower().strip()
+        
+        # First try exact match on full_name
+        for full_name in self.players.keys():
+            if full_name.lower() == name_lower:
+                return full_name
+        
+        # Then try if name is contained in full_name
+        for full_name in self.players.keys():
+            if name_lower in full_name.lower():
+                return full_name
+        
+        # Then try matching fielding_name or short_name
+        for full_name, player_data in self.players.items():
+            fielding_name = player_data.get("fielding_name", "").lower()
+            short_name = player_data.get("short_name", "").lower()
+            
+            if fielding_name and name_lower in fielding_name:
+                return full_name
+            if short_name and name_lower in short_name:
+                return full_name
+            if name_lower in fielding_name or name_lower in short_name:
+                return full_name
+        
+        return None
     
-    def _calculate_fantasy_points(self) -> None:
-        """Calculate fantasy points for each player based on their stats."""
+
+    def _calculate_fantasy_points(self, hat_tricks: dict[str, bool] = None) -> None:
+        """Calculate fantasy points for each player based on their stats.
+        
+        Args:
+            hat_tricks: Dictionary mapping player names to boolean indicating if they took a hat-trick
+        """
+        if hat_tricks is None:
+            hat_tricks = {}
+
         for player_name, player_data in self.players.items():
             # Regular batting points
             reg_runs: int = 0
@@ -1183,6 +1289,27 @@ class WWCScorecard:
                 so_runs, so_balls, so_fours, so_sixes, so_is_out, so_dismissal, is_super_over=True
             )
             
+            # Check if this player has a hat-trick
+            # Try exact match first, then partial match
+            has_hattrick = False
+            
+            # Exact match on full name
+            if player_name in hat_tricks:
+                has_hattrick = hat_tricks[player_name]
+            else:
+                # Try matching by short name or fielding name
+                short_name = player_data.get("short_name", "")
+                fielding_name = player_data.get("fielding_name", "")
+                
+                for bowler_name in hat_tricks.keys():
+                    if (short_name and bowler_name.lower() in short_name.lower()) or \
+                    (fielding_name and bowler_name.lower() in fielding_name.lower()) or \
+                    (bowler_name.lower() in player_name.lower()):
+                        has_hattrick = True
+                        if self.debug:
+                            print(f"DEBUG: Matched hat-trick for {player_name} via '{bowler_name}'")
+                        break
+
             # Regular bowling stats - store both cricket and decimal
             reg_overs_cricket: float = 0.0
             reg_overs_decimal: float = 0.0
@@ -1204,7 +1331,7 @@ class WWCScorecard:
             
             # For bowling points calculation, pass the cricket overs (function will convert)
             reg_bowling_points = FantasyPointsCalculator.calculate_bowling_points(
-                reg_overs_cricket, reg_maidens, reg_runs_bowled, reg_wickets, is_super_over=False
+                reg_overs_cricket, reg_maidens, reg_runs_bowled, reg_wickets, is_super_over=False, has_hattrick=has_hattrick
             )
             
             # Super Over bowling stats
@@ -1280,6 +1407,7 @@ class WWCScorecard:
             player_data["reg_runs_bowled"] = reg_runs_bowled
             player_data["reg_wickets"] = reg_wickets
             player_data["reg_economy"] = reg_economy
+            player_data["has_hattrick"] = has_hattrick
     
     def get_match_info(self) -> dict:
         match: dict = self.raw_data["match"]
@@ -1467,6 +1595,9 @@ class WWCScorecard:
                 # Fantasy points
                 fantasy_points: int = player.get("fantasy_points", 0)
                 
+                # Hat-trick
+                hattrick_indicator = " 🎩" if player.get("has_hattrick", False) else ""
+
                 if info['has_super_over']:
                     regular_pts: int = player.get("regular_points", 0)
                     so_pts: int = player.get("super_over_points", 0)
@@ -1478,7 +1609,7 @@ class WWCScorecard:
                           f"{self.colors['yellow']}{so_pts:>8.0f}{self.colors['reset']} "
                           f"{self.colors['cyan']}{fantasy_points:>8.0f}{self.colors['reset']}")
                 else:
-                    print(f"{color}{name:<35} "
+                    print(f"{color}{hattrick_indicator} {name:<35} "
                           f"{runs_display:>6} {balls_display:>6} {fours_display:>6} {sixes_display:>6} {sr_display:>11}  "
                           f"{overs_display:>6} {maidens_display:>7} {runs_bowled_display:>5} {wickets_display:>5} {economy_display:>8}  "
                           f"{catches:>7} {run_outs:>8} {stumpings:>9}  "

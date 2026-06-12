@@ -303,6 +303,7 @@ function MatchDetailsModal({ match, onClose }) {
                     <div>
                       <span style={{ fontWeight: '500' }}>{player.name}</span>
                       {player.is_motm && <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: '#FFD700' }}>⭐ PoM</span>}
+                      {player.has_hattrick && <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', fontStyle:'italic', color: '#DC3545' }}>🎩 hat-trick</span>}
                     </div>
                   </td>
                   <td style={{ padding: '0.75rem', fontSize: '0.8rem', color: '#999' }}>{player.country || '-'}</td>
