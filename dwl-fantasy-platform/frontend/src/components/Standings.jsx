@@ -224,7 +224,7 @@ function Standings({ teams, matches = [] }) {
                   borderBottom: '1px solid #2a2a3e',
                   transition: 'background 0.3s',
                   minWidth: '700px',
-                  height: '80px',
+                  height: '80px', // 80px height for 7 teams, 65px for 9 teams
                   overflow: 'hidden',
                   background: bgColor,
                 }}
@@ -276,9 +276,8 @@ function Standings({ teams, matches = [] }) {
                       <span className="team-name-desktop" style={{ color: teamColor, fontWeight: 'bold', fontSize: '1.8rem', lineHeight: '1.2' }}>
                         {team.name.toUpperCase()}
                       </span>
-                      <span className="team-name-mobile" style={{ color: teamColor, fontWeight: 'bold', fontSize: '1rem', lineHeight: '1.2' }}>
+                      <span className="team-name-mobile" style={{ color: teamColor, fontWeight: 'bold', fontSize: '1.8rem', lineHeight: '1.2' }}>
                         {teamAbbr}
-                        <span style={{ fontSize: '0.65rem', display: 'block', color: '#999', fontWeight: 'normal' }}>{team.name}</span>
                       </span>
                     </div>
                   </div>
@@ -400,7 +399,7 @@ function Standings({ teams, matches = [] }) {
           
           /* Override grid template columns for mobile */
           div[style*="display: grid"] {
-            grid-template-columns: 60px minmax(140px, 1fr) 70px minmax(180px, auto) !important;
+            grid-template-columns: 60px minmax(140px, .5fr) 100px minmax(180px, auto) !important;
             min-width: 500px !important;
           }
           
