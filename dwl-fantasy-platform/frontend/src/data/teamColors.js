@@ -30,3 +30,14 @@ export const teamEmojis = {
   'Singara Singapengal': '🦁',      // Lion / Lioness
   'Vanitha Warriors': '🐘',         // Warriors / Elephant (Strength)
 };
+
+// Team Abbreviations
+export const teamAbbreviations = {
+  'Gully Divas': 'GD',
+  'Janaki Royals': 'JR',
+  'Konkan Queens': 'KQ',
+  'Rajputana Ranis': 'RR',
+  'Sarafa Strikers': 'SS',
+  'Singara Singapengal': 'SGS',
+  'Vanitha Warriors': 'VW',
+};
