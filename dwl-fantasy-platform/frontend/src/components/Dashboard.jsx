@@ -15,7 +15,7 @@ import {
   ClockIcon,
   InformationCircleIcon,
 } from '@heroicons/react/24/outline';
-import { teamPrimaryColors, teamEmojis } from '../data/teamColors';
+import { teamPrimaryColors, teamSecondaryColors, teamEmojis } from '../data/teamColors';
 
 // Dynamic logo function
 const getTeamLogo = (teamName) => {
@@ -465,7 +465,7 @@ function Dashboard({ teams, players, matches, setActiveTab }) {
               <div style={{ 
                 fontSize: '1.5rem', 
                 fontWeight: 'bold', 
-                color: teamPrimaryColors[topTeam.name] || '#fff',
+                color: teamSecondaryColors[topTeam.name] || '#fff',
                 marginBottom: '0.25rem'
               }}>
                 {topTeam.name}
