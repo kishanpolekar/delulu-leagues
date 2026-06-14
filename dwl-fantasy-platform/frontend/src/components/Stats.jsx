@@ -240,7 +240,7 @@ function Stats({ teams, players, matches, leaderMap, tournamentStats, setActiveT
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', borderBottom: '1px solid #e0e0e0' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <span style={{ fontWeight: 'bold', minWidth: '30px' }}>{i + 1}.</span>
-                <PlayerNameWithBadge name={p.name} captainVC={p.captainVC} leaderMap={leaderMap} />
+                <PlayerNameWithBadge name={p.name} captainVC={p.captainVC} leaderMap={leaderMap} status={p.status} />
                 <span style={{ 
                   fontSize: '0.7rem', 
                   color: teamColors[p.team] || 'rgba(255,255,255,0.95)', 

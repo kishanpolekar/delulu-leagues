@@ -1,7 +1,7 @@
 import React from 'react';
 import { getPlayerLeaderIcons } from '../services/statsService';
 
-function PlayerNameWithBadge({ name, captainVC, showBadge = true, leaderMap }) {
+function PlayerNameWithBadge({ name, captainVC, showBadge = true, leaderMap, status = '' }) {
   const getBadgeStyle = (type) => {
     if (type === 'C') {
       return {
@@ -32,15 +32,75 @@ function PlayerNameWithBadge({ name, captainVC, showBadge = true, leaderMap }) {
   // Get leader icons for this player
   const leaderIcons = getPlayerLeaderIcons(name, leaderMap);
 
-  if (!showBadge && leaderIcons.length === 0) {
-    return <span>{name}</span>;
+  // Get player name styles based on status
+  const getPlayerNameStyle = () => {
+    if (status === 'Injured') {
+      return {
+        textDecoration: 'line-through',
+        textDecorationColor: '#ff4444',
+        textDecorationThickness: '2px',
+        filter: 'drop-shadow(0 0 4px rgba(128, 128, 128, 0.6))',
+        opacity: 0.85
+      };
+    } else if (status === 'Replacement') {
+      return {
+        textDecoration: 'underline',
+        fontStyle: 'italic',
+        filter: 'drop-shadow(0 0 4px rgba(66, 133, 244, 0.6))'
+      };
+    }
+    return {};
+  };
+
+  // Get status icon
+  const getStatusIcon = () => {
+    if (status === 'Injured') {
+      return {
+        icon: '🏥',
+        tooltip: 'Injured Player',
+        style: {
+          marginLeft: '0.3rem',
+          fontSize: '0.9rem',
+          cursor: 'help',
+          display: 'inline-block',
+          filter: 'drop-shadow(0 0 8px rgba(128, 128, 128, 0.8)) drop-shadow(0 0 4px rgba(128, 128, 128, 0.6))',
+        }
+      };
+    } else if (status === 'Replacement') {
+      return {
+        icon: '🔄',
+        tooltip: 'Replacement Player',
+        style: {
+          marginLeft: '0.3rem',
+          fontSize: '0.9rem',
+          cursor: 'help',
+          display: 'inline-block',
+          filter: 'drop-shadow(0 0 8px rgba(66, 133, 244, 0.8)) drop-shadow(0 0 4px rgba(66, 133, 244, 0.6))'
+        }
+      };
+    }
+    return null;
+  };
+
+  const statusIcon = getStatusIcon();
+
+  if (!showBadge && leaderIcons.length === 0 && !statusIcon) {
+    return <span style={getPlayerNameStyle()}>{name}</span>;
   }
 
   return (
     <span>
-      {name}
+      <span style={getPlayerNameStyle()}>{name}</span>
       {captainVC && (
         <span style={getBadgeStyle(captainVC)}>{captainVC}</span>
+      )}
+      {statusIcon && (
+        <span
+          title={statusIcon.tooltip}
+          style={statusIcon.style}
+        >
+          {statusIcon.icon}
+        </span>
       )}
       {leaderIcons.map((leader, idx) => (
         <span
@@ -48,7 +108,7 @@ function PlayerNameWithBadge({ name, captainVC, showBadge = true, leaderMap }) {
           title={leader.tooltip}
           style={{
             marginLeft: '0.3rem',
-            fontSize: '1.rem',
+            fontSize: '0.9rem',
             cursor: 'help',
             display: 'inline-block'
           }}

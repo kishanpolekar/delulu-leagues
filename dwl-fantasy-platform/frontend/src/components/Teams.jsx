@@ -549,7 +549,7 @@ function Teams({ teams, players, leaderMap }) {
                       return (
                         <tr key={p.id} style={{ borderBottom: '1px solid #2a2a3e' }}>
                           <td style={{ padding: '0.75rem 1rem', color: '#ccc' }}>
-                            <PlayerNameWithBadge name={p.name} captainVC={p.captainVC} leaderMap={leaderMap} />
+                            <PlayerNameWithBadge name={p.name} captainVC={p.captainVC} leaderMap={leaderMap} status={p.status} />
                           </td>
                           <td style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', color: '#999' }}>
                             {p.role || '-'}

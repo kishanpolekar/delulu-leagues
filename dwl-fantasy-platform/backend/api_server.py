@@ -327,6 +327,7 @@ async def get_teams():
     teams_list = []
     capt_vc = teams_data.get("capt_vc", {})
     name_to_abbr = teams_data.get("name_to_abbr", {})
+    player_status = teams_data.get("player_status", {})
     
     for abbr, team_name in teams_data.get("abbr_to_name", {}).items():
         roster = teams_data.get("rosters", {}).get(team_name, [])
@@ -364,6 +365,9 @@ async def get_teams():
             elif team_capt_vc.get(p) == 1.5:
                 player_role_in_team = "VC"
             
+            # Get player status
+            status = player_status.get(p, "")
+            
             players_list.append({
                 "id": hash(p),
                 "name": p,
@@ -373,7 +377,8 @@ async def get_teams():
                 "teamAbbr": abbr,
                 "points": 0,
                 "captainVC": player_role_in_team,
-                "soldPrice": players_data.get("player_price", {}).get(p, 0)
+                "soldPrice": players_data.get("player_price", {}).get(p, 0),
+                "status": status,
             })
         
         teams_list.append({
@@ -409,6 +414,7 @@ async def get_players():
     # Get captain/VC mappings
     capt_vc = teams_data.get("capt_vc", {})
     name_to_abbr = teams_data.get("name_to_abbr", {})
+    player_status = teams_data.get("player_status", {})
     
     players_list = []
     for player_name, team in players_data.get("player_team", {}).items():
@@ -421,6 +427,9 @@ async def get_players():
             elif capt_vc[team_abbr].get(player_name) == 1.5:
                 player_role_in_team = "VC"
         
+        # Get player status
+        status = player_status.get(player_name, "")
+        
         players_list.append({
             "id": abs(hash(player_name)) % 1000000,
             "name": player_name,
@@ -430,7 +439,8 @@ async def get_players():
             "teamAbbr": team_abbr,
             "points": round(player_points.get(player_name, 0), 1),
             "captainVC": player_role_in_team,
-            "soldPrice": players_data.get("player_price", {}).get(player_name, 0)
+            "soldPrice": players_data.get("player_price", {}).get(player_name, 0),
+            "status": status,
         })
     
     return players_list
@@ -679,6 +689,7 @@ async def fetch_match(request: MatchRequest):
             capt_vc = teams_data.get("capt_vc", {})
             name_to_abbr = teams_data.get("name_to_abbr", {})
             player_country = teams_data.get("player_country", {})
+            player_status = teams_data.get("player_status", {})
             
             # Generate fresh Excel file with all matches
             generate_excel(
@@ -690,6 +701,7 @@ async def fetch_match(request: MatchRequest):
                 match_history,
                 all_match_nums,
                 player_country,
+                player_status,
                 use_supabase=use_supabase
             )
         except Exception as excel_error:
@@ -841,7 +853,7 @@ async def load_config():
         (
             teams_abbr, rosters, player_team, capt_vc,
             name_lookup, abbr_to_name, name_to_abbr, all_roster_names,
-            player_country, country_wicketkeepers,
+            player_country, country_wicketkeepers, player_status,
         ) = read_dwl_config(CONFIG_PATH, debug=False)
         
         # Load player roles from config
@@ -873,6 +885,7 @@ async def load_config():
             "all_roster_names": all_roster_names,
             "player_country": player_country,
             "country_wicketkeepers": country_wicketkeepers,
+            "player_status": player_status,
         }
         
         players_data = {
@@ -880,10 +893,16 @@ async def load_config():
             "player_country": player_country,
             "player_role": player_role,
             "player_price": player_price,
+            "player_status": player_status,
         }
         
         print(f"   Loaded {len(abbr_to_name)} teams")
         print(f"   Loaded {len(player_team)} players")
+        if player_status:
+            injured = sum(1 for s in player_status.values() if s == "Injured")
+            replacements = sum(1 for s in player_status.values() if s == "Replacement")
+            if injured > 0 or replacements > 0:
+                print(f"   Player status: {injured} injured, {replacements} replacements")
         
     except Exception as e:
         print(f"❌ Error loading config: {e}")

@@ -285,81 +285,6 @@ def match_player_to_roster(
     return None
 
 
-# # ─────────────────────────────────────────────────────────────────────────────
-# # SCORING
-# # ─────────────────────────────────────────────────────────────────────────────
-
-# SR_TIERS = [
-#     (150, 175, 5), (175, 200, 10), (200, 225, 15), (225, 250, 20),
-#     (250, 275, 25), (275, 300, 30), (300, 325, 35), (325, 350, 40),
-#     (350, 600, 45), (600, 9999, 50),
-# ]
-# ECON_TIERS = [
-#     (0, 4, 50), (4, 5, 35), (5, 6, 25), (6, 7, 15), (7, 8, 10),
-#     (12, 14, -10), (14, 16, -15), (16, 20, -20)
-#     ]
-
-
-# def calc_batting_pts(runs, balls, fours, sixes, is_out):
-#     pts = 0
-#     if runs > 0:
-#         pts += runs + fours + sixes * 2
-#     if balls >= 3:
-#         sr = (runs / balls) * 100
-#         for lo, hi, bonus in SR_TIERS:
-#             if lo <= sr < hi:
-#                 pts += bonus
-#                 break
-#         else:
-#             if sr < 100 and not (runs == 0 and is_out):
-#                 pts -= 15
-#     if runs >= 150:
-#         pts += 75
-#     elif runs >= 100:
-#         pts += 50
-#     elif runs >= 50:
-#         pts += 25
-#     if runs == 0 and is_out:
-#         pts += -35 if balls == 0 else (-25 if balls == 1 else -15)
-#     return pts
-
-
-# def _overs_to_decimal(overs: float) -> float:
-#     whole = int(overs)
-#     extra_balls = round((overs - whole) * 10)
-#     return (whole * 6 + extra_balls) / 6
-
-
-# def calc_bowling_pts(overs, maidens, runs_c, wickets, has_hattrick=False):
-#     pts = wickets * 40
-#     if wickets >= 6:
-#         pts += 75
-#     elif wickets >= 5:
-#         pts += 50
-#     elif wickets >= 4:
-#         pts += 35
-#     elif wickets >= 3:
-#         pts += 25
-#     if has_hattrick:
-#         pts += 45
-#     pts += maidens * 20
-#     dec = _overs_to_decimal(overs)
-#     if dec >= 1.0:
-#         econ = runs_c / dec
-#         for lo, hi, bonus in ECON_TIERS:
-#             if lo <= econ < hi:
-#                 pts += bonus
-#                 break
-#         else:
-#             if econ >= 20:
-#                 pts -= 25
-#     return pts
-
-
-# def calc_fielding_pts(catches, run_outs, stumpings):
-#     return (catches + run_outs + stumpings) * 30
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # READ CONFIG FILES
 # ─────────────────────────────────────────────────────────────────────────────
@@ -371,7 +296,7 @@ def read_dwl_config(config_path: str, debug: bool = False):
     Expected sheets:
     - "DWLTeams": Columns: Abbrv, Team Name
     - "Players": Columns: Player Name, Role, DWL Team, Country
-    - Team sheets (e.g., "KKR", "AC", etc.): Captain/VC info with specific format
+    - Team sheets (e.g., "GD", "JR", etc.): Captain/VC info with specific format
     """
     warnings.simplefilter(action='ignore', category=UserWarning)
     
@@ -409,6 +334,10 @@ def read_dwl_config(config_path: str, debug: bool = False):
     player_role: dict[str, str] = {}
     player_price: dict[str, float] = {}
     
+    # Track injured/replaced players
+    player_status: dict[str, str] = {}  # "Injured" or "Replacement"
+    player_replacement_map: dict[str, str] = {}  # injured_player -> replacement_player
+    
     # Extract wicketkeepers from Players sheet based on Role column
     country_wicketkeepers: dict[str, list[str]] = {}
     
@@ -420,10 +349,21 @@ def read_dwl_config(config_path: str, debug: bool = False):
         country_full = str(row.get("Country", "")).strip()
         role = str(row.get("Role", "")).strip().lower()
         
+        # Check for Replaced column (could be "Replaced" or "Status" or similar)
+        replaced_value = str(row.get("Replaced", "")).strip() if "Replaced" in row else ""
+        if not replaced_value and "Status" in row:
+            replaced_value = str(row.get("Status", "")).strip()
+        
         if pname and pname != "nan" and team and team != "nan":
             rosters.setdefault(team, []).append(pname)
             player_team[pname] = team
             player_role[pname] = role
+            
+            # Track player status
+            if replaced_value and replaced_value != "nan":
+                player_status[pname] = replaced_value
+                if debug:
+                    print(f"   {pname} status: {replaced_value}")
             
             if country_full and country_full != "nan":
                 country_abbr = country_name_to_abbr.get(country_full)
@@ -453,7 +393,8 @@ def read_dwl_config(config_path: str, debug: bool = False):
             country = player_country.get(pname, "NOT SET")
             dwl = player_team.get(pname, "?")
             role = player_role.get(pname, "?")
-            print(f"   {pname:<30} -> DWL: {dwl:<20} Country: {country} Role: {role}")
+            status = player_status.get(pname, "ACTIVE")
+            print(f"   {pname:<30} -> DWL: {dwl:<20} Country: {country} Role: {role} Status: {status}")
         
         print(f"\n📋 Wicketkeepers by country:")
         for country, wks in country_wicketkeepers.items():
@@ -499,7 +440,7 @@ def read_dwl_config(config_path: str, debug: bool = False):
     return (
         teams_abbr, rosters, player_team, capt_vc,
         dwl_lookup, abbr_to_name, name_to_abbr, all_roster_names,
-        player_country, country_wicketkeepers,
+        player_country, country_wicketkeepers, player_status,
     )
 
 
@@ -758,7 +699,7 @@ def _hdr(cell, text, bg=HEADER_BG):
     cell.border = TB
 
 
-def _init_team_sheet(ws, team_name, abbr, roster, capt_vc_team, player_country):
+def _init_team_sheet(ws, team_name, abbr, roster, capt_vc_team, player_country, player_status=None):
     """Initialize a new team sheet with headers."""
     # Title
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=5)
@@ -769,7 +710,10 @@ def _init_team_sheet(ws, team_name, abbr, roster, capt_vc_team, player_country):
     
     # Legend
     ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=5)
-    c = ws.cell(row=2, column=1, value="🏆 Captain (2×)   |   🥈 Vice-Captain (1.5×)   |   ⭐ Player of the Match")
+    legend_text = "🏆 Captain (2×)   |   🥈 Vice-Captain (1.5×)   |   ⭐ Player of the Match"
+    if player_status:
+        legend_text += "   |   🏥 Injured   |   🔄 Replacement"
+    c = ws.cell(row=2, column=1, value=legend_text)
     c.font = _font(9, False, "555555", italic=True)
     c.alignment = _center()
     
@@ -781,7 +725,7 @@ def _init_team_sheet(ws, team_name, abbr, roster, capt_vc_team, player_country):
     _shdr(ws.cell(row=3, column=5), "Total")
     
     ws.column_dimensions["A"].width = 4
-    ws.column_dimensions["B"].width = 24
+    ws.column_dimensions["B"].width = 28  # Increased to accommodate status indicators
     ws.column_dimensions["C"].width = 15  # Increased width for full country names
     ws.column_dimensions["D"].width = 5
     ws.column_dimensions["E"].width = 9
@@ -811,6 +755,9 @@ def _init_team_sheet(ws, team_name, abbr, roster, capt_vc_team, player_country):
         mult = capt_vc_team.get(pname, 1.0)
         country = player_country.get(pname, "")
         
+        # Get player status if available
+        status = player_status.get(pname, "") if player_status else ""
+        
         # Convert country abbreviation to full name
         country_display = country_full_names.get(country, country)
         
@@ -826,9 +773,27 @@ def _init_team_sheet(ws, team_name, abbr, roster, capt_vc_team, player_country):
         c = ws.cell(row=row, column=1, value=ri + 1)
         c.font = _font(10); c.fill = _fill(bg); c.alignment = _center(); c.border = TB
         
-        prefix = "🏆 " if mult == 2.0 else ("🥈 " if mult == 1.5 else "")
-        c = ws.cell(row=row, column=2, value=f"{prefix}{pname}")
-        c.font = _font(10, bold=(mult > 1)); c.fill = _fill(bg); c.alignment = _left(); c.border = TB
+        # Add status indicator to player name
+        prefix = ""
+        if mult == 2.0:
+            prefix = "🏆 "
+        elif mult == 1.5:
+            prefix = "🥈 "
+        
+        # Add injury/replacement indicator
+        status_suffix = ""
+        if status == "Injured":
+            status_suffix = " 🏥"
+        elif status == "Replacement":
+            status_suffix = " 🔄"
+        
+        c = ws.cell(row=row, column=2, value=f"{prefix}{pname}{status_suffix}")
+        c.font = _font(10, bold=(mult > 1 or status))
+        if status == "Injured":
+            c.font = _font(10, bold=True, italic=True, color="FF0000")
+        elif status == "Replacement":
+            c.font = _font(10, bold=True, color="008000")
+        c.fill = _fill(bg); c.alignment = _left(); c.border = TB
         
         c = ws.cell(row=row, column=3, value=country_display)
         c.font = _font(10); c.fill = _fill(bg); c.alignment = _left(); c.border = TB
@@ -1015,6 +980,7 @@ def generate_excel(
     match_history: dict,
     all_match_nums: list,
     player_country: dict,
+    player_status: dict = None,
     use_supabase: bool = False,
 ):
     """Generate or update Excel file - saves locally or to Supabase based on mode."""
@@ -1030,7 +996,7 @@ def generate_excel(
             continue
         
         ws = wb.create_sheet(title=abbr)
-        _init_team_sheet(ws, team_name, abbr, roster, capt_vc.get(abbr, {}), player_country)
+        _init_team_sheet(ws, team_name, abbr, roster, capt_vc.get(abbr, {}), player_country, player_status)
         grand_total, per_match = write_team_sheet(
             ws, team_name, abbr, roster, capt_vc.get(abbr, {}),
             match_history, all_match_nums, player_country
@@ -1122,8 +1088,8 @@ async def run(args):
     print(f"📖 Loading DWL config from {config_file} ...")
     (
         teams_abbr, rosters, player_team, capt_vc,
-        dwl_lookup, abbr_to_name, name_to_abbr,
-        player_country, country_wicketkeepers,
+        dwl_lookup, abbr_to_name, name_to_abbr, all_roster_names,
+        player_country, country_wicketkeepers, player_status,
     ) = read_dwl_config(config_file, debug=args.debug)
 
     # Load existing match data from Supabase
@@ -1212,7 +1178,7 @@ async def run(args):
         return
     standings = generate_excel(
         sb_client, output_file, teams_abbr, rosters, capt_vc,
-        match_history, all_match_nums, player_country, use_supabase=use_supabase,
+        match_history, all_match_nums, player_country, player_status=player_status, use_supabase=use_supabase
     )
 
     print("\n🏆 Current Standings:")
@@ -1237,7 +1203,7 @@ Examples:
 Required Excel structure (single file):
   - Sheet "DWLTeams": Columns: Abbrv, Team Name
   - Sheet "Players": Columns: Player Name, Role, DWL Team, Country
-  - Team sheets (e.g., "KKR", "AC", etc.): Captain/VC info
+  - Team sheets (e.g., "GD", "JR", etc.): Captain/VC info
         """,
     )
     p.add_argument("-m", "--match-id",  type=int, default=None,
