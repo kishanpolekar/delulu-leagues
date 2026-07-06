@@ -6,6 +6,7 @@ venv/
 # Data files
 warmups/
 wwc_match_data.json
+wwc_award_data.json
 espn_match_info/
 espn_names_match
 DWL_Scores.xlsx

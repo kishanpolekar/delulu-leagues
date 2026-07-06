@@ -23,6 +23,8 @@ function App() {
   const [teams, setTeams] = useState([]);
   const [players, setPlayers] = useState([]);
   const [matches, setMatches] = useState([]);
+  const [matchDetails, setMatchDetails] = useState([]);
+  const [teamAwards, setTeamAwards] = useState({});
   const [tournamentStats, setTournamentStats] = useState({
     mostRuns: null,
     mostWickets: null,
@@ -54,20 +56,23 @@ function App() {
   
   const loadData = async () => {
     try {
-      const [teamsData, playersData, matchesData] = await Promise.all([
+      const [teamsData, playersData, matchesData, teamAwardsData] = await Promise.all([
         fetchTeams(),
         fetchPlayers(),
-        fetchMatches()
+        fetchMatches(),
+        fetch('/api/team-awards').then(res => res.json()).catch(() => ({}))
       ]);
       setTeams(teamsData);
       setPlayers(playersData);
       setMatches(matchesData);
+      setTeamAwards(teamAwardsData || {}); 
       // Fetch match details for tournament stats (do this separately to not block main UI)
       if (matchesData && matchesData.length > 0) {
         setStatsLoading(true);
         try {
-          const matchDetails = await fetchAllMatchesDetails(matchesData);
-          const stats = calculateTournamentStats(matchDetails);
+          const details = await fetchAllMatchesDetails(matchesData);
+          setMatchDetails(details);
+          const stats = calculateTournamentStats(details);
           setTournamentStats(stats);
         } catch (err) {
           console.error('Error loading tournament stats:', err);
@@ -83,6 +88,14 @@ function App() {
   
   const refreshData = async () => {
     await loadData();
+  };
+  
+  // When awards are applied, update teamAwards
+  const handleUpdateStandings = (updatedTeams, updatedPlayers, awards) => {
+    setTeams(updatedTeams);
+    setPlayers(updatedPlayers);
+    setTeamAwards(awards || {});
+    setActiveTab('standings');
   };
   
   if (loading) {
@@ -109,7 +122,7 @@ function App() {
             <h3>Quick Fix:</h3>
             <ol>
               <li>Make sure backend is running: <code>python api_server.py</code></li>
-              <li>Upload your <code>WWC_Config.xlsx</code> in the Players tab</li>
+              <li>Upload updated <code>WWC_Config.xlsx</code></li>
             </ol>
           </div>
         </div>
@@ -127,7 +140,7 @@ function App() {
           setActiveTab={setActiveTab}
         />;
       case 'standings':
-        return <Standings teams={teams} matches={matches} />;
+        return <Standings teams={teams} matches={matches} teamAwards={teamAwards} />;
       case 'teams':
         return <Teams teams={teams} players={players} leaderMap={tournamentStats?.leaderMap || {}} />;
       case 'scoring':
@@ -135,20 +148,38 @@ function App() {
       case 'players':
         return <Players players={players} onRefresh={refreshData} />;
       case 'stats':
-        return <Stats teams={teams} players={players} matches={matches} leaderMap={tournamentStats?.leaderMap || {}} tournamentStats={tournamentStats} setActiveTab={setActiveTab} />;
+        return <Stats 
+          teams={teams} 
+          players={players} 
+          matches={matches} 
+          leaderMap={tournamentStats?.leaderMap || {}} 
+          matchDetails={matchDetails}
+          tournamentStats={tournamentStats} 
+          setActiveTab={setActiveTab}
+        />;
       case 'matches':
-        return <Matches matches={matches} onMatchAdded={refreshData} />;
+        return <Matches 
+          matches={matches} 
+          onMatchAdded={refreshData}
+          teams={teams}
+          players={players}
+          matchDetails={matchDetails}
+          tournamentStats={tournamentStats}
+          leaderMap={tournamentStats?.leaderMap || {}}
+          onRefresh={refreshData}
+          onUpdateStandings={handleUpdateStandings}
+        />;
       case 'about':
         return <AboutUs />;
       case 'settings':
         return <Settings />;
       default:
         return <Dashboard 
-        teams={teams} 
-        players={players} 
-        matches={matches} 
-        setActiveTab={setActiveTab}
-      />
+          teams={teams} 
+          players={players} 
+          matches={matches} 
+          setActiveTab={setActiveTab}
+        />
     }
   };
 

@@ -9,6 +9,19 @@ const api = axios.create({
   },
 });
 
+// Add a response interceptor for debugging
+api.interceptors.response.use(
+  (response) => {
+    console.log('Response:', response.status, response.config.url);
+    return response;
+  },
+  (error) => {
+    console.error('Response Error:', error.response?.status, error.response?.config?.url);
+    return Promise.reject(error);
+  }
+);
+
+
 export async function fetchTeams() {
   const response = await api.get('/teams');
   return response.data;
@@ -72,12 +85,21 @@ export async function fetchMatchFromESPN(matchId, matchNum) {
 export async function downloadExcel() {
   try {
     const response = await api.get('/download-excel', {
-      responseType: 'blob' // Important: This tells axios to treat the response as a blob
+      responseType: 'blob',
+      // Add this to ensure the request is properly formatted
+      headers: {
+        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      }
     });
+    
+    // Check if the response is actually a blob
+    if (!response.data || response.data.size === 0) {
+      throw new Error('Received empty file');
+    }
     
     // Create a blob URL and trigger download
     const blob = new Blob([response.data], { 
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      type: response.headers['content-type'] || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -86,10 +108,27 @@ export async function downloadExcel() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    
+    // Clean up the URL after a short delay
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url);
+    }, 100);
+    
+    return true;
   } catch (error) {
     console.error('Error downloading Excel file:', error);
-    throw new Error(error.response?.data?.detail || 'Failed to download Excel file');
+    // Check if the error response has a JSON body (error message from server)
+    if (error.response && error.response.data) {
+      // Try to read the error message from the blob response
+      try {
+        const text = await new Response(error.response.data).text();
+        const json = JSON.parse(text);
+        throw new Error(json.detail || 'Failed to download Excel file');
+      } catch {
+        throw new Error('Failed to download Excel file. Please try again.');
+      }
+    }
+    throw new Error(error.message || 'Failed to download Excel file');
   }
 }
 

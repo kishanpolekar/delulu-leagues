@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import ReactDOM from 'react-dom';
 import { teamPrimaryColors, teamSecondaryColors, teamEmojis, teamAbbreviations } from '../data/teamColors';
 import { downloadExcel } from '../services/api';
 
@@ -10,6 +11,14 @@ const teamBgColors = teamPrimaryColors
 const teamColors = teamSecondaryColors
 
 const defaultColor = '#333333';
+
+const AWARD_DETAILS = {
+  '💪🏻': { label: 'Most Runs', description: 'Leading run scorer of the tournament' },
+  '🎯': { label: 'Most Wickets', description: 'Leading wicket taker of the tournament' },
+  '⚡': { label: 'Highest Strike Rate', description: 'Best batting strike rate (min 50 balls)' },
+  '🛡️': { label: 'Best Economy', description: 'Best bowling economy (min 10 overs)' },
+  '🌟': { label: 'Most DWL Points', description: 'Most DWL points in a single match' }
+};
 
 const downloadDisabled = (matches) => {
   if (!matches || matches.length === 0) {
@@ -106,8 +115,30 @@ const getFormTooltip = (points, matchNum, isMostRecent) => {
   return `Match ${matchNum}: ${points} points${isMostRecent ? ' (Most Recent)' : ''}`;
 };
 
-function Standings({ teams, matches = [] }) {
+// Tooltip component rendered via portal
+const TooltipPortal = ({ children }) => {
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+  
+  if (!mounted) return null;
+  
+  return ReactDOM.createPortal(
+    children,
+    document.body
+  );
+};
+
+function Standings({ teams, matches = [], teamAwards = {} }) {
   const [downloading, setDownloading] = React.useState(false);
+  const [activeTooltip, setActiveTooltip] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ left: 0, top: 0, placedBelow: false });
+  const [tooltipContent, setTooltipContent] = useState(null);
+  const iconRefs = useRef({});
+  
   const sortedTeams = [...teams].sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
 
   const getTeamLogo = (teamName) => {
@@ -126,6 +157,64 @@ function Standings({ teams, matches = [] }) {
     } finally {
       setDownloading(false);
     }
+  };
+
+  const calculateTooltipPosition = (iconRef, awardInfo) => {
+    if (!iconRef) return null;
+    
+    const rect = iconRef.getBoundingClientRect();
+    const tooltipWidth = 200; // Approximate width
+    const tooltipHeight = 60; // Approximate height
+    
+    // Calculate position - center it above the icon
+    let left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
+    let top = rect.top - tooltipHeight - 10;
+    let placedBelow = false;
+    
+    // Prevent going off the left side
+    if (left < 10) {
+      left = 10;
+    }
+    
+    // Prevent going off the right side
+    if (left + tooltipWidth > window.innerWidth - 10) {
+      left = window.innerWidth - tooltipWidth - 10;
+    }
+    
+    // If it would go off the top, place it below
+    if (top < 10) {
+      top = rect.bottom + 10;
+      placedBelow = true;
+    }
+    
+    return { left, top, placedBelow };
+  };
+
+  const handleTooltipMouseEnter = (e, icon, indexKey) => {
+    const iconRef = iconRefs.current[indexKey];
+    if (!iconRef) return;
+    
+    const awardInfo = AWARD_DETAILS[icon];
+    
+    // Set content
+    setTooltipContent({
+      label: awardInfo?.label || 'Award Winner',
+      description: awardInfo?.description || ''
+    });
+    
+    // Set active tooltip
+    setActiveTooltip(indexKey);
+    
+    // Calculate position
+    const position = calculateTooltipPosition(iconRef, awardInfo);
+    if (position) {
+      setTooltipPosition(position);
+    }
+  };
+
+  const handleTooltipMouseLeave = () => {
+    setActiveTooltip(null);
+    setTooltipContent(null);
   };
 
   return (
@@ -193,16 +282,17 @@ function Standings({ teams, matches = [] }) {
           {/* Header */}
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: '150px 1fr 200px 400px',
+            gridTemplateColumns: '150px 1fr 180px 400px 120px',
             background: 'linear-gradient(135deg, #667eea, #764ba2)',
             color: 'white',
             borderRadius: '12px 12px 0 0',
-            minWidth: '700px'
+            minWidth: '750px'
           }}>
             <div style={{ padding: '1rem', textAlign: 'center', fontWeight: 'bold' }}>POS</div>
             <div style={{ padding: '1rem', textAlign: 'left', fontWeight: 'bold' }}>TEAM</div>
             <div style={{ padding: '1rem', textAlign: 'left', fontWeight: 'bold' }}>POINTS</div>
             <div style={{ padding: '1rem', textAlign: 'left', fontWeight: 'bold' }}>RECENT FORM</div>
+            <div style={{ padding: '1rem', textAlign: 'left', fontWeight: 'bold' }}>AWARDS</div>
           </div>
           
           {/* Rows */}
@@ -214,17 +304,18 @@ function Standings({ teams, matches = [] }) {
             const recentForm = getTeamMatchPoints(team.name, matches);
             const { imagePath, emoji } = getTeamLogo(team.name);
             const teamAbbr = teamAbbreviations[team.name] || team.name.substring(0, 3).toUpperCase();
+            const awards = teamAwards[team.name] || [];
             
             return (
               <div 
                 key={team.id} 
                 style={{ 
                   display: 'grid', 
-                  gridTemplateColumns: '150px 1fr 200px 400px',
+                  gridTemplateColumns: '150px 1fr 180px 400px 120px',
                   borderBottom: '1px solid #2a2a3e',
                   transition: 'background 0.3s',
-                  minWidth: '700px',
-                  height: '80px', // 80px height for 7 teams, 65px for 9 teams
+                  minWidth: '750px',
+                  height: '80px',
                   overflow: 'hidden',
                   background: bgColor,
                 }}
@@ -365,12 +456,90 @@ function Standings({ teams, matches = [] }) {
                     </div>
                   )}
                 </div>
+                
+                {/* Awards Column */}
+                <div style={{ 
+                  padding: '0 0.5rem', 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '100%',
+                  gap: '0.25rem',
+                  flexWrap: 'wrap'
+                }}>
+                  {awards.map((icon, i) => {
+                    const indexKey = `${team.id}-${i}`;
+                    const isActive = activeTooltip === indexKey;
+                    
+                    return (
+                      <div
+                        key={i}
+                        ref={(el) => { iconRefs.current[indexKey] = el; }}
+                        style={{
+                          position: 'relative',
+                          display: 'inline-block',
+                          cursor: 'help',
+                          zIndex: 1
+                        }}
+                        onMouseEnter={(e) => handleTooltipMouseEnter(e, icon, indexKey)}
+                        onMouseLeave={handleTooltipMouseLeave}
+                      >
+                        <span style={{ fontSize: '1.2rem' }}>{icon}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
         </div>
       </div>
       
+      {/* Tooltip Portal - Rendered at document.body level */}
+      {activeTooltip && tooltipContent && (
+        <TooltipPortal>
+          <div
+            style={{
+              position: 'fixed',
+              left: tooltipPosition.left + 'px',
+              top: tooltipPosition.top + 'px',
+              background: 'rgba(0,0,0,0.92)',
+              color: 'white',
+              padding: '0.5rem 0.8rem',
+              borderRadius: '8px',
+              fontSize: '0.75rem',
+              whiteSpace: 'nowrap',
+              zIndex: 99999,
+              pointerEvents: 'none',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              maxWidth: '300px',
+              opacity: 1,
+              visibility: 'visible',
+              transition: 'opacity 0.15s ease'
+            }}
+          >
+            <div style={{ fontWeight: 'bold', color: '#FFD700' }}>
+              {tooltipContent.label}
+            </div>
+            <div style={{ fontSize: '0.6rem', color: '#ccc', marginTop: '0.15rem' }}>
+              {tooltipContent.description}
+            </div>
+            <div style={{
+              position: 'absolute',
+              [tooltipPosition.placedBelow ? 'top' : 'bottom']: tooltipPosition.placedBelow ? '-6px' : '-6px',
+              left: '50%',
+              transform: 'translateX(-50%) rotate(45deg)',
+              width: '12px',
+              height: '12px',
+              background: 'rgba(0,0,0,0.92)',
+              borderRight: '1px solid rgba(255,255,255,0.1)',
+              borderBottom: '1px solid rgba(255,255,255,0.1)'
+            }} />
+          </div>
+        </TooltipPortal>
+      )}
+
       <style jsx>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
@@ -399,36 +568,36 @@ function Standings({ teams, matches = [] }) {
           
           /* Override grid template columns for mobile */
           div[style*="display: grid"] {
-            grid-template-columns: 60px minmax(140px, .5fr) 100px minmax(180px, auto) !important;
-            min-width: 500px !important;
+            grid-template-columns: 50px minmax(120px, .5fr) 70px minmax(140px, auto) 60px !important;
+            min-width: 480px !important;
           }
           
           /* Reduce logo size on mobile */
           .team-logo {
-            width: 40px !important;
-            height: 40px !important;
+            width: 35px !important;
+            height: 35px !important;
           }
           
           /* Reduce medal font size on mobile */
           .medal {
-            font-size: 1.5rem !important;
+            font-size: 1.2rem !important;
           }
           
           /* Reduce points font size on mobile */
           .points {
-            font-size: 1.2rem !important;
+            font-size: 1rem !important;
           }
           
           /* Reduce form box size on mobile */
           .form-box {
-            width: 38px !important;
-            height: 28px !important;
-            font-size: 0.75rem !important;
+            width: 30px !important;
+            height: 24px !important;
+            font-size: 0.65rem !important;
           }
           
           /* Reduce header padding on mobile */
           div[style*="padding: 1rem"] {
-            padding: 0.6rem !important;
+            padding: 0.5rem !important;
           }
         }
       `}</style>

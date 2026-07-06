@@ -29,7 +29,7 @@ const TournamentStatsCards = ({ stats }) => {
       display: 'grid',
       gridTemplateColumns: 'repeat(4, 1fr)',
       gap: '1rem',
-      marginBottom: '2rem'
+      marginBottom: '1rem'
     }}>
       {cards.map(card => {
         const player = stats[card.key];
@@ -79,10 +79,150 @@ const TournamentStatsCards = ({ stats }) => {
   );
 };
 
-function Stats({ teams, players, matches, leaderMap, tournamentStats, setActiveTab }) {
-  // State for match details modal
+// Most DWL Points in a Single Match Card Component
+const MostPointsInMatchCard = ({ matchDetails }) => {
+  // Calculate Most DWL Points in a Single Match
+  const getMostPointsInMatch = () => {
+    let bestPlayer = null;
+    let bestPoints = 0;
+    let bestMatch = null;
+    let bestMatchDetails = null;
+
+    matchDetails?.forEach(match => {
+      match.players?.forEach(player => {
+        if (player.points > bestPoints) {
+          bestPoints = player.points;
+          bestPlayer = {
+            ...player,
+            dwlTeam: player.dwl_team || player.dwlTeam || '',
+            country: player.country || '',
+          };
+          bestMatch = match.match_num;
+          bestMatchDetails = match;
+        }
+      });
+    });
+
+    return bestPlayer ? {
+      ...bestPlayer,
+      match: bestMatch,
+      matchDetails: bestMatchDetails,
+      pointsInMatch: bestPoints
+    } : null;
+  };
+
+  const player = getMostPointsInMatch();
+
+  if (!player) {
+    return (
+      <div style={{
+        background: 'rgba(17, 17, 34, 0.8)',
+        borderRadius: '16px',
+        padding: '1.5rem',
+        border: '1px solid rgba(255,255,255,0.08)',
+        textAlign: 'center'
+      }}>
+        <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🌟</div>
+        <div style={{ fontSize: '0.8rem', color: '#9C27B0', textTransform: 'uppercase', letterSpacing: '1px' }}>Most DWL Points in a Single Match</div>
+        <div style={{ color: '#666', fontSize: '0.9rem', marginTop: '0.5rem' }}>No data yet</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      background: 'rgba(17, 17, 34, 0.8)',
+      borderRadius: '16px',
+      padding: '1.5rem',
+      border: '1px solid rgba(255,255,255,0.08)',
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: '1rem',
+      alignItems: 'center'
+    }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🌟</div>
+        <div style={{ fontSize: '0.8rem', color: '#9C27B0', textTransform: 'uppercase', letterSpacing: '1px' }}>
+          Most DWL Points in a Single Match
+        </div>
+        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'white', marginTop: '0.5rem' }}>
+          {player.name}
+        </div>
+        <div style={{ fontSize: '0.9rem', color: '#9C27B0', fontWeight: 'bold' }}>
+          {player.pointsInMatch} pts
+        </div>
+        <div style={{ fontSize: '0.8rem', color: '#999' }}>
+          M{player.match}
+        </div>
+      </div>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: '1fr 1fr', 
+        gap: '0.5rem',
+        paddingLeft: '1rem',
+        borderLeft: '1px solid rgba(255,255,255,0.08)'
+      }}>
+        <div>
+          <div style={{ fontSize: '0.65rem', color: '#666' }}>Team</div>
+          <div style={{ fontSize: '0.9rem', color: 'white', fontWeight: '500' }}>{player.dwlTeam}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: '0.65rem', color: '#666' }}>Country</div>
+          <div style={{ fontSize: '0.9rem', color: 'white', fontWeight: '500' }}>{player.country || 'Unknown'}</div>
+        </div>
+        {player.runs > 0 && (
+          <div>
+            <div style={{ fontSize: '0.65rem', color: '#666' }}>Runs</div>
+            <div style={{ fontSize: '0.9rem', color: '#FF6B35', fontWeight: '500' }}>{player.runs}</div>
+          </div>
+        )}
+        {player.wickets > 0 && (
+          <div>
+            <div style={{ fontSize: '0.65rem', color: '#666' }}>Wickets</div>
+            <div style={{ fontSize: '0.9rem', color: '#28a745', fontWeight: '500' }}>{player.wickets}</div>
+          </div>
+        )}
+        {player.balls > 0 && (
+          <div>
+            <div style={{ fontSize: '0.65rem', color: '#666' }}>Balls Faced</div>
+            <div style={{ fontSize: '0.9rem', color: 'white', fontWeight: '500' }}>{player.balls}</div>
+          </div>
+        )}
+        {player.overs > 0 && (
+          <div>
+            <div style={{ fontSize: '0.65rem', color: '#666' }}>Overs</div>
+            <div style={{ fontSize: '0.9rem', color: 'white', fontWeight: '500' }}>{player.overs}</div>
+          </div>
+        )}
+        {player.catches > 0 && (
+          <div>
+            <div style={{ fontSize: '0.65rem', color: '#666' }}>Catches</div>
+            <div style={{ fontSize: '0.9rem', color: '#FFD700', fontWeight: '500' }}>{player.catches}</div>
+          </div>
+        )}
+        {player.stumpings > 0 && (
+          <div>
+            <div style={{ fontSize: '0.65rem', color: '#666' }}>Stumpings</div>
+            <div style={{ fontSize: '0.9rem', color: '#FFD700', fontWeight: '500' }}>{player.stumpings}</div>
+          </div>
+        )}
+        <div>
+          <div style={{ fontSize: '0.65rem', color: '#666' }}>Match</div>
+          <div style={{ fontSize: '0.9rem', color: '#667eea', fontWeight: '500' }}>M{player.match}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: '0.65rem', color: '#666' }}>Points</div>
+          <div style={{ fontSize: '0.9rem', color: '#FFD700', fontWeight: 'bold' }}>{player.pointsInMatch}</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+function Stats({ teams, players, matches, leaderMap, matchDetails: matchDetailsProp, tournamentStats, setActiveTab }) {
+  // State for match details modal - renamed to avoid conflict
   const [selectedMatch, setSelectedMatch] = useState(null);
-  const [matchDetails, setMatchDetails] = useState(null);
+  const [selectedMatchDetails, setSelectedMatchDetails] = useState(null);
   const [toast, setToast] = useState(null);
 
   const totalPoints = teams.reduce((sum, t) => sum + (t.totalPoints || 0), 0);
@@ -162,7 +302,7 @@ function Stats({ teams, players, matches, leaderMap, tournamentStats, setActiveT
     setSelectedMatch(match);
     try {
       const details = await fetchMatchDetails(match.matchNum);
-      setMatchDetails(details);
+      setSelectedMatchDetails(details);
     } catch (error) {
       setToast({ message: 'Failed to load match details', type: 'error' });
       setTimeout(() => setToast(null), 3000);
@@ -171,7 +311,7 @@ function Stats({ teams, players, matches, leaderMap, tournamentStats, setActiveT
 
   const closeMatchDetails = () => {
     setSelectedMatch(null);
-    setMatchDetails(null);
+    setSelectedMatchDetails(null);
   };
 
   const statsCards = [
@@ -229,7 +369,12 @@ function Stats({ teams, players, matches, leaderMap, tournamentStats, setActiveT
         })}
       </div>
 
-      <TournamentStatsCards stats={tournamentStats} />
+      <TournamentStatsCards stats={tournamentStats} matchDetails={matchDetailsProp || []} />
+
+      {/* Most DWL Points in a Single Match - Second Row */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <MostPointsInMatchCard matchDetails={matchDetailsProp || []} />
+      </div>
 
       {/* Top Performers and Highest Scores - Side by Side */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
@@ -433,8 +578,8 @@ function Stats({ teams, players, matches, leaderMap, tournamentStats, setActiveT
 
       {/* Match Details Modal */}
       <AnimatePresence>
-        {selectedMatch && matchDetails && (
-          <MatchDetailsModal match={matchDetails} onClose={closeMatchDetails} />
+        {selectedMatch && selectedMatchDetails && (
+          <MatchDetailsModal match={selectedMatchDetails} onClose={closeMatchDetails} />
         )}
       </AnimatePresence>
 

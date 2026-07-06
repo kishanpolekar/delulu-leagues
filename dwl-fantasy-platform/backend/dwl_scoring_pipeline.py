@@ -169,6 +169,25 @@ def load_match_data(data_file: str = "wwc_match_data.json") -> dict:
         return {}
 
 
+def save_award_data(award_winners: list, team_awards: dict, data_file: str = "wwc_award_data.json"):
+    """Save award data to a JSON file."""
+    data = {
+        "award_winners": award_winners,
+        "team_awards": team_awards,
+    }
+    with open(data_file, 'w') as f:
+        json.dump(data, f, indent=2)
+    print(f"✅ Award data saved to {data_file}")
+
+def load_award_data(data_file: str = "wwc_award_data.json") -> tuple:
+    """Load award data from JSON file."""
+    if Path(data_file).exists():
+        with open(data_file, 'r') as f:
+            data = json.load(f)
+        return data.get("award_winners", []), data.get("team_awards", {})
+    return [], {}
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # NAME MATCHING - SIMPLIFIED USING ESPN FIELDS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -981,14 +1000,20 @@ def generate_excel(
     all_match_nums: list,
     player_country: dict,
     player_status: dict = None,
+    award_winners: list = None,  # List of award winner dicts
+    team_awards: dict = None,    # Dict mapping team_name -> list of award icons
     use_supabase: bool = False,
 ):
     """Generate or update Excel file - saves locally or to Supabase based on mode."""
     wb = Workbook()
     wb.remove(wb.active)
     
+    # Create Standings sheet first (index 0 so it appears first)
+    ws_s = wb.create_sheet(title="Standings", index=0)
+    
     standings = []
     
+    # First pass: Create all team sheets and collect standings data
     for abbr in sorted(teams_abbr.keys()):
         team_name = teams_abbr[abbr]
         roster = rosters.get(team_name, [])
@@ -1003,8 +1028,192 @@ def generate_excel(
         )
         standings.append((team_name, abbr, grand_total, per_match))
     
-    ws_s = wb.create_sheet(title="Standings", index=0)
-    write_standings_sheet(ws_s, standings, all_match_nums)
+    # If award data is provided, add award bonuses and indicators FIRST before writing standings
+    if award_winners and team_awards:
+        print("🏆 Adding award bonuses and indicators to Excel...")
+        
+        # Track team totals to update standings
+        team_total_updates = {}
+        
+        # Add award columns to each team sheet and update totals
+        for abbr in sorted(teams_abbr.keys()):
+            team_name = teams_abbr[abbr]
+            ws = wb[abbr]
+            
+            # Find the last match column (match columns start at column 6)
+            last_match_col = 6 + len(all_match_nums) - 1
+            
+            # Add "Award Bonus" column
+            bonus_col = last_match_col + 1
+            ws.cell(row=3, column=bonus_col, value="Award Bonus")
+            ws.cell(row=3, column=bonus_col).font = _font(10, True, "FFFFFF")
+            ws.cell(row=3, column=bonus_col).fill = _fill(SUBHDR_BG)
+            ws.cell(row=3, column=bonus_col).alignment = _center()
+            ws.column_dimensions[get_column_letter(bonus_col)].width = 12
+            
+            # Add "Awards" column
+            award_col = bonus_col + 1
+            ws.cell(row=3, column=award_col, value="Awards")
+            ws.cell(row=3, column=award_col).font = _font(10, True, "FFFFFF")
+            ws.cell(row=3, column=award_col).fill = _fill(SUBHDR_BG)
+            ws.cell(row=3, column=award_col).alignment = _center()
+            ws.column_dimensions[get_column_letter(award_col)].width = 20
+            
+            # Get roster rows (rows 4 to before team total)
+            roster_rows = []
+            row = 4
+            while row <= ws.max_row:
+                cell_value = ws.cell(row=row, column=1).value
+                if cell_value == "" or cell_value == "TEAM TOTAL":
+                    break
+                if cell_value and cell_value != "TEAM TOTAL":
+                    roster_rows.append(row)
+                row += 1
+            
+            # Track total bonus for this team
+            team_total_bonus = 0
+            
+            # Update each player's row with award bonus
+            for row_idx in roster_rows:
+                player_name_cell = ws.cell(row=row_idx, column=2)
+                player_name = player_name_cell.value
+                if player_name:
+                    # Clean player name (remove prefix like "🏆 " or "🥈 ")
+                    clean_name = player_name
+                    for prefix in ["🏆 ", "🥈 ", "⭐ "]:
+                        if clean_name.startswith(prefix):
+                            clean_name = clean_name[len(prefix):]
+                    
+                    # Check if this player won any award
+                    total_bonus = 0
+                    award_icons = []
+                    for award in award_winners:
+                        if award.get("name") == clean_name:
+                            total_bonus += award.get("bonus_points", 0)
+                            award_icons.append(award.get("award_icon", ""))
+                    
+                    if total_bonus > 0:
+                        # Update total column (column 5)
+                        total_cell = ws.cell(row=row_idx, column=5)
+                        current_total = total_cell.value or 0
+                        total_cell.value = current_total + total_bonus
+                        
+                        # Track bonus for team total
+                        team_total_bonus += total_bonus
+                        
+                        # Add bonus in the bonus column
+                        bonus_cell = ws.cell(row=row_idx, column=bonus_col)
+                        bonus_cell.value = total_bonus
+                        bonus_cell.font = _font(10, True, "28a745")
+                        bonus_cell.alignment = _center()
+                        bonus_cell.border = TB
+                        
+                        # Add award icons
+                        if award_icons:
+                            award_cell = ws.cell(row=row_idx, column=award_col)
+                            award_cell.value = " ".join(award_icons)
+                            award_cell.alignment = _center()
+                            award_cell.border = TB
+            
+            # Update team total row
+            total_row = len(roster_rows) + 4
+            total_cell = ws.cell(row=total_row, column=5)
+            current_total = total_cell.value or 0
+            total_cell.value = current_total + team_total_bonus
+            
+            # Store team total update for standings
+            team_total_updates[team_name] = current_total + team_total_bonus
+            
+            # Add team awards in team total row
+            team_award_icons = team_awards.get(team_name, [])
+            if team_award_icons:
+                award_cell = ws.cell(row=total_row, column=award_col)
+                award_cell.value = " ".join(team_award_icons)
+                award_cell.font = _font(12)
+                award_cell.alignment = _center()
+                award_cell.border = TB
+        
+        # Update standings data with new totals
+        updated_standings = []
+        for team_name, abbr, _, per_match in standings:
+            new_total = team_total_updates.get(team_name, 0)
+            # If no update, use the original total
+            if new_total == 0:
+                # Find the original total from standings
+                for t, a, total, pm in standings:
+                    if t == team_name:
+                        new_total = total
+                        break
+            updated_standings.append((team_name, abbr, new_total, per_match))
+        
+        # SORT by total points DESCENDING
+        updated_standings.sort(key=lambda x: x[2], reverse=True)
+        
+        # Write standings with updated data AND include awards column
+        # First, set up the headers with Awards column
+        active = sorted(all_match_nums)
+        ncols = 4 + len(active)  # POS, TEAM, TOTAL, Awards, then match columns
+        
+        # Title
+        ws_s.merge_cells(start_row=1, start_column=1, end_row=1, end_column=ncols)
+        c = ws_s.cell(row=1, column=1, value="🏏  DWL FANTASY LEAGUE  —  OVERALL STANDINGS")
+        c.font = _font(14, True, "FFFFFF"); c.fill = _fill(HEADER_BG); c.alignment = _center()
+        
+        # Headers: POS, TEAM, TOTAL, Awards, then matches
+        hdrs = ["POS", "TEAM", "TOTAL", "Awards"] + [f"M{mn}" for mn in active]
+        for ci, h in enumerate(hdrs, 1):
+            _shdr(ws_s.cell(row=2, column=ci), h)
+        
+        # Column widths
+        ws_s.column_dimensions["A"].width = 5
+        ws_s.column_dimensions["B"].width = 26
+        ws_s.column_dimensions["C"].width = 9
+        ws_s.column_dimensions["D"].width = 20  # Awards column
+        for i in range(len(active)):
+            ws_s.column_dimensions[get_column_letter(5 + i)].width = 7
+        
+        # Write each team row (now sorted by points)
+        MEDAL = {1: "🥇", 2: "🥈", 3: "🥉"}
+        POS_BG = {1: "FFD700", 2: "C0C0C0", 3: "CD7F32"}
+        
+        for ri, (team_name, abbr, total, mpts) in enumerate(updated_standings):
+            row = 3 + ri
+            pos = ri + 1
+            bg = POS_BG.get(pos, "FFFFFF" if ri % 2 == 0 else ALT_BG)
+            
+            # POS
+            c = ws_s.cell(row=row, column=1, value=MEDAL.get(pos, str(pos)))
+            c.font = _font(11, True); c.fill = _fill(bg); c.alignment = _center(); c.border = TB
+            
+            # TEAM
+            c = ws_s.cell(row=row, column=2, value=f"{team_name}  [{abbr}]")
+            c.font = _font(10, bold=(pos <= 3)); c.fill = _fill(bg); c.alignment = _left(); c.border = TB
+            
+            # TOTAL
+            t_disp = round(total, 1) if total != int(total) else int(total)
+            c = ws_s.cell(row=row, column=3, value=t_disp)
+            c.font = _font(11, True); c.fill = _fill(TOTAL_BG); c.alignment = _center(); c.border = TB
+            
+            # AWARDS
+            award_icons = team_awards.get(team_name, [])
+            c = ws_s.cell(row=row, column=4, value=" ".join(award_icons) if award_icons else "")
+            c.font = _font(12); c.fill = _fill(bg); c.alignment = _center(); c.border = TB
+            
+            # Match columns
+            for ci, mn in enumerate(active):
+                val = mpts.get(mn, 0)
+                val_disp = round(val, 1) if val != int(val) else int(val)
+                c = ws_s.cell(row=row, column=5 + ci)
+                c.value = val_disp if val_disp else "-"
+                c.font = _font(10); c.fill = _fill(bg); c.alignment = _center(); c.border = TB
+        
+        ws_s.freeze_panes = "A3"
+        ws_s.row_dimensions[1].height = 24
+        ws_s.row_dimensions[2].height = 26
+    
+    else:
+        # No awards - write standings normally
+        write_standings_sheet(ws_s, standings, all_match_nums)
     
     if use_supabase and is_production_mode():
         # Save to Supabase Storage

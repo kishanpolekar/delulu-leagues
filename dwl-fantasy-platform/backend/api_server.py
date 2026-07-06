@@ -22,7 +22,14 @@ import pandas as pd
 # Import your existing modules
 from wwc_fantasy import WWCScorecard
 from dwl_scoring_pipeline import (
-    read_dwl_config, process_scorecard, load_match_data, save_match_data, generate_excel, extract_espn_names
+    read_dwl_config,
+    process_scorecard,
+    load_match_data,
+    save_match_data,
+    load_award_data,
+    save_award_data,
+    generate_excel,
+    extract_espn_names
 )
 
 # Global state
@@ -139,6 +146,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition", "Content-Length"]
 )
 
 
@@ -324,6 +332,9 @@ async def get_teams():
     
     match_history = load_match_data(DATA_FILE)
     
+    # Load award data
+    award_winners, team_awards = load_award_data()
+    
     teams_list = []
     capt_vc = teams_data.get("capt_vc", {})
     name_to_abbr = teams_data.get("name_to_abbr", {})
@@ -340,6 +351,11 @@ async def get_teams():
             for player, player_data in match_entry.items():
                 if player_data.get("dwl_team") == team_name:
                     total_points += player_data.get("final_pts", 0)
+        
+        # Add award bonuses to team total
+        for award in award_winners:
+            if award.get("dwl_team") == team_name:
+                total_points += award.get("bonus_points", 0)
         
         matches_played = len(match_history)
         
@@ -368,6 +384,18 @@ async def get_teams():
             # Get player status
             status = player_status.get(p, "")
             
+            # Get player's individual points (including award bonuses)
+            player_points = 0
+            for match_num, match_data in match_history.items():
+                match_entry = match_data.get("match_entry", {})
+                if p in match_entry:
+                    player_points += match_entry[p].get("final_pts", 0)
+            
+            # Add award bonus to player points
+            for award in award_winners:
+                if award.get("name") == p:
+                    player_points += award.get("bonus_points", 0)
+            
             players_list.append({
                 "id": hash(p),
                 "name": p,
@@ -375,7 +403,7 @@ async def get_teams():
                 "country": players_data.get("player_country", {}).get(p, ""),
                 "team": team_name,
                 "teamAbbr": abbr,
-                "points": 0,
+                "points": round(player_points, 1),
                 "captainVC": player_role_in_team,
                 "soldPrice": players_data.get("player_price", {}).get(p, 0),
                 "status": status,
@@ -753,9 +781,79 @@ async def fetch_match(request: MatchRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/apply-awards")
+async def apply_awards(awards_data: dict):
+    """
+    Apply award bonuses to players and update Excel with award indicators.
+    """
+    try:
+        # Get award winners and team awards from request
+        award_winners = awards_data.get("award_winners", [])
+        team_awards = awards_data.get("team_awards", {})
+        
+        if not award_winners:
+            raise HTTPException(status_code=400, detail="No award winners provided")
+        
+        # Save award data to file
+        save_award_data(award_winners, team_awards)
+        
+        # Load match history
+        match_history = load_match_data(DATA_FILE)
+        all_match_nums = sorted(match_history.keys())
+        
+        # Get teams data
+        teams_abbr = teams_data.get("teams_abbr", {})
+        rosters = teams_data.get("rosters", {})
+        capt_vc = teams_data.get("capt_vc", {})
+        player_country = teams_data.get("player_country", {})
+        player_status = teams_data.get("player_status", {})
+        
+        # Generate Excel with award data
+        use_supabase = is_production_mode()
+        sb_client = get_supabase_client() if use_supabase else None
+        
+        generate_excel(
+            sb_client,
+            EXCEL_FILE_PATH,
+            teams_abbr,
+            rosters,
+            capt_vc,
+            match_history,
+            all_match_nums,
+            player_country,
+            player_status,
+            award_winners=award_winners,
+            team_awards=team_awards,
+            use_supabase=use_supabase
+        )
+        
+        return {
+            "success": True,
+            "message": "Awards applied successfully and Excel updated",
+            "award_winners": award_winners,
+            "team_awards": team_awards
+        }
+        
+    except Exception as e:
+        print(f"❌ Error applying awards: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+@app.get("/api/team-awards")
+async def get_team_awards():
+    """Get team awards for display in standings."""
+    _, team_awards = load_award_data()
+    return team_awards
+
+
 @app.get("/api/download-excel")
 async def download_excel():
     """Download the DWL_Scores.xlsx file - from Supabase or local based on mode."""
+
+    print("Downloading Standings Excel...")
+    print(f"is_production_mode: {is_production_mode()}")
 
     if is_production_mode():
         # Production mode: Download from Supabase Storage

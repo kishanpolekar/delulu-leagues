@@ -1,23 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PlusIcon, XMarkIcon, CloudArrowUpIcon, EyeIcon, LockClosedIcon, KeyIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, XMarkIcon, CloudArrowUpIcon, EyeIcon, LockClosedIcon, KeyIcon, TrophyIcon } from '@heroicons/react/24/outline';
 import { fetchMatchFromESPN, fetchMatchDetails, verifyAdminPassword, getPasswordStatus, getAdminConfig } from '../services/api';
 import MatchDetailsModal from './MatchDetailsModal';
+import EndTournament from './EndTournament';
 import { countryAbbrToFullNames } from '../data/countryInfo';
 
 // Country abbreviation to full name mapping
 const countryNames = countryAbbrToFullNames
 
-function Matches({ matches, onMatchAdded }) {
+function Matches({ 
+  matches, 
+  onMatchAdded, 
+  teams, 
+  players, 
+  matchDetails: allMatchDetails,  // Renamed prop to avoid conflict
+  tournamentStats, 
+  leaderMap,
+  onRefresh,
+  onUpdateStandings
+}) {
   const [showForm, setShowForm] = useState(false);
   const [matchNum, setMatchNum] = useState('');
   const [matchId, setMatchId] = useState('');
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState(null);
-  const [matchDetails, setMatchDetails] = useState(null);
+  const [selectedMatchDetails, setSelectedMatchDetails] = useState(null);  // Renamed state
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [fetchingModal, setFetchingModal] = useState(false);
+  
+  // End Tournament states
+  const [showEndTournament, setShowEndTournament] = useState(false);
+  const TOTAL_MATCHES = 33;
+  const isTournamentComplete = matches.length >= TOTAL_MATCHES;
   
   // Password protection states
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -525,7 +541,7 @@ function Matches({ matches, onMatchAdded }) {
     setDetailsLoading(true);
     try {
       const details = await fetchMatchDetails(match.matchNum);
-      setMatchDetails(details);
+      setSelectedMatchDetails(details);  // Using renamed state
     } catch (error) {
       showToast('Failed to load match details', 'error');
     } finally {
@@ -535,7 +551,11 @@ function Matches({ matches, onMatchAdded }) {
 
   const closeMatchDetails = () => {
     setSelectedMatch(null);
-    setMatchDetails(null);
+    setSelectedMatchDetails(null);  // Using renamed state
+  };
+
+  const handleEndTournament = () => {
+    setShowEndTournament(true);
   };
 
   return (
@@ -562,112 +582,110 @@ function Matches({ matches, onMatchAdded }) {
         </div>
       </div>
 
-      {/* Password Modal */}
-      <AnimatePresence>
-        {showPasswordModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+      {/* End Tournament Banner - Only shown when tournament is complete */}
+      {isTournamentComplete && (
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          style={{
+            marginBottom: '1.5rem',
+            padding: '1.25rem',
+            background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 107, 53, 0.15))',
+            borderRadius: '16px',
+            border: '2px solid #FFD700',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1rem',
+            boxShadow: '0 4px 20px rgba(255, 215, 0, 0.1)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{
+              fontSize: '2.5rem',
+              animation: 'pulse 2s infinite'
+            }}>
+              🏆
+            </div>
+            <div>
+              <h3 style={{ margin: 0, color: '#FFD700', fontSize: '1.2rem' }}>
+                Tournament Complete!
+              </h3>
+              <p style={{ margin: '0.25rem 0 0', color: '#aaa', fontSize: '0.9rem' }}>
+                All {TOTAL_MATCHES} matches have been played. Ready to announce the champions!
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleEndTournament}
             style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.8)',
+              padding: '0.75rem 2rem',
+              background: 'linear-gradient(135deg, #FFD700, #FF6B35)',
+              border: 'none',
+              borderRadius: '12px',
+              color: '#1a1a2e',
+              fontWeight: 'bold',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 4px 15px rgba(255, 215, 0, 0.3)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 2000,
-              padding: '1rem'
+              gap: '0.75rem',
+              whiteSpace: 'nowrap'
             }}
-            onClick={() => setShowPasswordModal(false)}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.boxShadow = '0 6px 25px rgba(255, 215, 0, 0.5)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 4px 15px rgba(255, 215, 0, 0.3)';
+            }}
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              style={{
-                background: '#0d0d1a',
-                borderRadius: '16px',
-                padding: '2rem',
-                maxWidth: '400px',
-                width: '100%',
-                border: '1px solid #2a2a3e'
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                <KeyIcon style={{ width: 48, height: 48, color: '#667eea', margin: '0 auto' }} />
-                <h3 style={{ color: 'white', marginTop: '1rem', marginBottom: '0.5rem' }}>Admin Access Required</h3>
-                <p style={{ color: '#888', fontSize: '0.8rem' }}>
-                  Enter password to add new matches
-                </p>
-                {failedAttempts > 0 && failedAttempts < maxFailedAttempts && (
-                  <p style={{ color: '#FF4444', fontSize: '0.7rem', marginTop: '0.5rem' }}>
-                    {maxFailedAttempts - failedAttempts} attempt(s) remaining
-                  </p>
-                )}
-              </div>
-              
-              <input
-                type="password"
-                placeholder="Enter password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && verifyPassword()}
-                autoFocus
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: '#1a1a2e',
-                  border: '1px solid #2a2a3e',
-                  borderRadius: '8px',
-                  color: 'white',
-                  fontSize: '1rem',
-                  marginBottom: '1rem',
-                  outline: 'none'
-                }}
-              />
-              
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <button
-                  onClick={() => setShowPasswordModal(false)}
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    background: '#2a2a3e',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: '#ccc',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={verifyPassword}
-                  disabled={verifying}
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: 'white',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    opacity: verifying ? 0.6 : 1
-                  }}
-                >
-                  {verifying ? 'Verifying...' : 'Verify'}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <TrophyIcon style={{ width: 20, height: 20 }} />
+            End Tournament & Announce Winners
+          </button>
+        </motion.div>
+      )}
+
+      {/* Progress Bar - Always visible */}
+      <div style={{
+        marginBottom: '1.5rem',
+        padding: '0.75rem 1rem',
+        background: 'rgba(17, 17, 34, 0.8)',
+        borderRadius: '10px',
+        border: '1px solid #2a2a3e'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+          <span style={{ color: '#999', fontSize: '0.85rem' }}>
+            Tournament Progress
+          </span>
+          <span style={{ color: '#667eea', fontWeight: 'bold', fontSize: '0.85rem' }}>
+            {matches.length}/{TOTAL_MATCHES} Matches
+          </span>
+        </div>
+        <div style={{ 
+          width: '100%', 
+          height: '8px', 
+          background: '#1a1a2e', 
+          borderRadius: '4px',
+          overflow: 'hidden'
+        }}>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${(matches.length / TOTAL_MATCHES) * 100}%` }}
+            transition={{ duration: 0.5 }}
+            style={{
+              height: '100%',
+              background: 'linear-gradient(90deg, #667eea, #764ba2)',
+              borderRadius: '4px'
+            }}
+          />
+        </div>
+      </div>
 
       {/* Rest of your component remains the same */}
       <AnimatePresence>
@@ -878,6 +896,113 @@ function Matches({ matches, onMatchAdded }) {
         }
       </div>
 
+      {/* Password Modal */}
+      <AnimatePresence>
+        {showPasswordModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.8)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 2000,
+              padding: '1rem'
+            }}
+            onClick={() => setShowPasswordModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              style={{
+                background: '#0d0d1a',
+                borderRadius: '16px',
+                padding: '2rem',
+                maxWidth: '400px',
+                width: '100%',
+                border: '1px solid #2a2a3e'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                <KeyIcon style={{ width: 48, height: 48, color: '#667eea', margin: '0 auto' }} />
+                <h3 style={{ color: 'white', marginTop: '1rem', marginBottom: '0.5rem' }}>Admin Access Required</h3>
+                <p style={{ color: '#888', fontSize: '0.8rem' }}>
+                  Enter password to add new matches
+                </p>
+                {failedAttempts > 0 && failedAttempts < maxFailedAttempts && (
+                  <p style={{ color: '#FF4444', fontSize: '0.7rem', marginTop: '0.5rem' }}>
+                    {maxFailedAttempts - failedAttempts} attempt(s) remaining
+                  </p>
+                )}
+              </div>
+              
+              <input
+                type="password"
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && verifyPassword()}
+                autoFocus
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  background: '#1a1a2e',
+                  border: '1px solid #2a2a3e',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '1rem',
+                  marginBottom: '1rem',
+                  outline: 'none'
+                }}
+              />
+              
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button
+                  onClick={() => setShowPasswordModal(false)}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    background: '#2a2a3e',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#ccc',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={verifyPassword}
+                  disabled={verifying}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: 'white',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    opacity: verifying ? 0.6 : 1
+                  }}
+                >
+                  {verifying ? 'Verifying...' : 'Verify'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Fetching Modal */}
       <AnimatePresence>
         {fetchingModal && (
@@ -930,8 +1055,32 @@ function Matches({ matches, onMatchAdded }) {
 
       {/* Match Details Modal */}
       <AnimatePresence>
-        {selectedMatch && matchDetails && (
-          <MatchDetailsModal match={matchDetails} onClose={closeMatchDetails} />
+        {selectedMatch && selectedMatchDetails && (
+          <MatchDetailsModal match={selectedMatchDetails} onClose={closeMatchDetails} />
+        )}
+      </AnimatePresence>
+
+      {/* End Tournament Modal */}
+      <AnimatePresence>
+        {showEndTournament && (
+          <EndTournament
+            teams={teams}
+            players={players}
+            matches={matches}
+            matchDetails={allMatchDetails}
+            tournamentStats={tournamentStats}
+            leaderMap={leaderMap}
+            onComplete={() => {
+              setShowEndTournament(false);
+              if (onRefresh) onRefresh();
+            }}
+            onUpdateStandings={(updatedTeams, updatedPlayers, teamAwards) => {
+              setShowEndTournament(false);
+              if (onUpdateStandings) {
+                onUpdateStandings(updatedTeams, updatedPlayers, teamAwards);
+              }
+            }}
+          />
         )}
       </AnimatePresence>
 
@@ -970,6 +1119,11 @@ function Matches({ matches, onMatchAdded }) {
         
         .rainbow-border {
           animation: rainbow 5s linear infinite;
+        }
+        
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
         }
       `}</style>
     </motion.div>
