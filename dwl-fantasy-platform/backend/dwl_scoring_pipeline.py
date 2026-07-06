@@ -21,6 +21,7 @@ First-time setup:
 
 import argparse
 import asyncio
+from datetime import datetime
 import io
 import json
 import os
@@ -169,23 +170,79 @@ def load_match_data(data_file: str = "wwc_match_data.json") -> dict:
         return {}
 
 
-def save_award_data(award_winners: list, team_awards: dict, data_file: str = "wwc_award_data.json"):
-    """Save award data to a JSON file."""
-    data = {
-        "award_winners": award_winners,
-        "team_awards": team_awards,
-    }
-    with open(data_file, 'w') as f:
-        json.dump(data, f, indent=2)
-    print(f"✅ Award data saved to {data_file}")
+def save_award_data(award_winners: list, team_awards: dict, data_file: str = "wwc_award_data.json") -> None:
+    """Save award data to Supabase (production) or local file (local) using upsert."""
+    
+    if is_production_mode():
+        print("Saving award data to Supabase...")
+        sb_client = get_supabase_client()
+        if not sb_client:
+            return
+    
+        try:
+            # Prepare award data for Supabase
+            awards_data = {
+                "id": 1,  # Single record for all awards
+                "award_winners": award_winners,
+                "team_awards": team_awards,
+                "updated_at": datetime.now().isoformat()
+            }
+            
+            # Perform upsert (update if exists, insert if new)
+            response = sb_client.table("awards").upsert(
+                awards_data,
+                on_conflict="id"
+            ).execute()
+            
+            if hasattr(response, 'error') and response.error:
+                print(f"Supabase upsert error: {response.error}")
+            else:
+                print(f"✅ Saved award data to Supabase")
+        except Exception as e:
+            print(f"Error saving award data to Supabase: {e}")
+    else:
+        # Local mode - save to JSON file
+        print("Saving award data to Local file...")
+        print(f"   Path: {os.path.abspath(data_file)}")
+        data = {
+            "award_winners": award_winners,
+            "team_awards": team_awards,
+            "updated_at": datetime.now().isoformat()
+        }
+        with open(data_file, 'w') as f:
+            json.dump(data, f, indent=2)
+        print(f"✅ Award data saved to {data_file}")
+
 
 def load_award_data(data_file: str = "wwc_award_data.json") -> tuple:
-    """Load award data from JSON file."""
-    if Path(data_file).exists():
-        with open(data_file, 'r') as f:
-            data = json.load(f)
-        return data.get("award_winners", []), data.get("team_awards", {})
-    return [], {}
+    """Load award data from Supabase (production) or local JSON file (local)."""
+    
+    if is_production_mode():
+        # Production mode - read from Supabase table
+        print("Loading award data from Supabase...")
+        sb_client = get_supabase_client()
+        if not sb_client:
+            return [], {}
+    
+        try:
+            response = sb_client.table("awards").select("*").execute()
+            if response.data and len(response.data) > 0:
+                # Get the first record (should only be one with id=1)
+                award_data = response.data[0]
+                return award_data.get("award_winners", []), award_data.get("team_awards", {})
+            return [], {}
+        except Exception as e:
+            print(f"Error loading award data from Supabase: {e}")
+            return [], {}
+    else:
+        # Local mode - read from JSON file
+        print("Loading award data from Local file...")
+        print(f"   Path: {os.path.abspath(data_file)}")
+        if Path(data_file).exists():
+            with open(data_file, 'r') as f:
+                data = json.load(f)
+            return data.get("award_winners", []), data.get("team_awards", {})
+        return [], {}
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -794,7 +794,7 @@ async def apply_awards(awards_data: dict):
         if not award_winners:
             raise HTTPException(status_code=400, detail="No award winners provided")
         
-        # Save award data to file
+        # Save award data to file/Supabase
         save_award_data(award_winners, team_awards)
         
         # Load match history
@@ -839,6 +839,16 @@ async def apply_awards(awards_data: dict):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+@app.get("/api/awards")
+async def get_awards():
+    """Get award data for display."""
+    award_winners, team_awards = load_award_data()
+    return {
+        "award_winners": award_winners,
+        "team_awards": team_awards
+    }
     
 
 @app.get("/api/team-awards")
