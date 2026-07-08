@@ -516,6 +516,9 @@ function Teams({ teams, players, leaderMap }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid #2a2a3e' }}>
+                      <th style={{ padding: '1rem', textAlign: 'center', width: '60px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }} />
+                      </th>
                       <th style={{ padding: '0.75rem 1rem', textAlign: 'left', color: '#e0e0e0', cursor: 'pointer' }} onClick={() => handleSort('name')}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                           Player {getSortIcon('name')}
@@ -544,10 +547,13 @@ function Teams({ teams, players, leaderMap }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredAndSortedPlayers.map(p => {
+                    {filteredAndSortedPlayers.map((p, index) => {
                       const countryFullName = countryNames[p.country] || p.country || '-';
                       return (
                         <tr key={p.id} style={{ borderBottom: '1px solid #2a2a3e' }}>
+                          <td style={{ padding: '1rem', textAlign: 'center', color: '#999', fontSize: '0.85rem' }}>
+                            {index + 1}
+                          </td>
                           <td style={{ padding: '0.75rem 1rem', color: '#ccc' }}>
                             <PlayerNameWithBadge name={p.name} captainVC={p.captainVC} leaderMap={leaderMap} status={p.status} />
                           </td>

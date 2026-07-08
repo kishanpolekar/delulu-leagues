@@ -218,6 +218,9 @@ function Players({ players, onRefresh }) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white' }}>
+                <th style={{ padding: '1rem', textAlign: 'center', width: '60px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }} />
+                </th>
                 <th style={{ padding: '1rem', textAlign: 'left', cursor: 'pointer' }} onClick={() => handleSort('name')}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                     Player {getSortIcon('name')}
@@ -251,7 +254,7 @@ function Players({ players, onRefresh }) {
               </tr>
             </thead>
             <tbody>
-              {filteredAndSortedPlayers.map(p => {
+              {filteredAndSortedPlayers.map((p, index) => {
                 const countryFullName = countryNames[p.country] || p.country;
                 const badgeStyle = getCaptainVCBadge(p.captainVC);
                 return (
@@ -261,6 +264,9 @@ function Players({ players, onRefresh }) {
                     onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(102, 126, 234, 0.15)'}
                     onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   >
+                    <td style={{ padding: '1rem', textAlign: 'center', color: '#999', fontSize: '0.85rem' }}>
+                      {index + 1}
+                    </td>
                     <td style={{ padding: '1rem' }}><strong>{p.name}</strong></td>
                     <td style={{ padding: '1rem' }}>
                       <span style={{ background: getRoleColor(p.role), padding: '0.2rem 0.5rem', borderRadius: '12px', fontSize: '0.7rem', color: 'white' }}>
