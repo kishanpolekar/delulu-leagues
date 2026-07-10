@@ -11,7 +11,7 @@ import Scoring from './components/Scoring';
 import Stats from './components/Stats';
 import AboutUs from './components/AboutUs';
 import Settings from './components/Settings';
-import { healthCheck, fetchTeams, fetchPlayers, fetchMatches, fetchAllMatchesDetails } from './services/api';
+import { healthCheck, fetchTeams, fetchPlayers, fetchMatches, fetchAllMatchesDetails, fetchTeamAwards } from './services/api';
 import { calculateTournamentStats } from './services/statsService';
 import './styles/App.css';
 
@@ -60,7 +60,7 @@ function App() {
         fetchTeams(),
         fetchPlayers(),
         fetchMatches(),
-        fetch('/api/team-awards').then(res => res.json()).catch(() => ({}))
+        fetchTeamAwards(),
       ]);
       setTeams(teamsData);
       setPlayers(playersData);

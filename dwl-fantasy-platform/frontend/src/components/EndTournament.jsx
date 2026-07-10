@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrophyIcon, KeyIcon, LockClosedIcon } from '@heroicons/react/24/outline';
+import { applyAwards } from '../services/api';
 import { teamPrimaryColors, teamSecondaryColors } from '../data/teamColors';
 import { verifyAdminPassword, getPasswordStatus, getAdminConfig } from '../services/api';
 
@@ -768,16 +769,7 @@ function EndTournament({
     });
     
     try {
-      const response = await fetch('/api/apply-awards', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          award_winners: awardWinnersData,
-          team_awards: teamAwards
-        })
-      });
+      const response = await applyAwards(awardWinnersData, teamAwards);
       
       if (response.ok) {
         // Pass teamAwards back to parent
