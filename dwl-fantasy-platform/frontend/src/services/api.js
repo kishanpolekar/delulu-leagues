@@ -82,6 +82,57 @@ export async function fetchMatchFromESPN(matchId, matchNum) {
   }
 }
 
+// ============ AWARD ENDPOINTS ============
+
+/**
+ * Apply award bonuses to players and update Excel with award indicators.
+ * @param {Array} awardWinners - List of award winner objects
+ * @param {Object} teamAwards - Object mapping team names to award icon arrays
+ * @returns {Promise} Response with success status and award data
+ */
+export async function applyAwards(awardWinners, teamAwards) {
+  try {
+    const response = await api.post('/apply-awards', {
+      award_winners: awardWinners,
+      team_awards: teamAwards
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error applying awards:', error);
+    throw new Error(error.response?.data?.detail || 'Failed to apply awards');
+  }
+}
+
+/**
+ * Get all award data for display.
+ * @returns {Promise} Object containing award_winners and team_awards
+ */
+export async function fetchAwards() {
+  try {
+    const response = await api.get('/awards');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching awards:', error);
+    return { award_winners: [], team_awards: {} };
+  }
+}
+
+/**
+ * Get team awards for display in standings.
+ * @returns {Promise} Object mapping team names to award icon arrays
+ */
+export async function fetchTeamAwards() {
+  try {
+    const response = await api.get('/team-awards');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching team awards:', error);
+    return {};
+  }
+}
+
+export default api;
+
 export async function downloadExcel() {
   try {
     const response = await api.get('/download-excel', {
