@@ -1,17 +1,13 @@
+.
+├── Award Tiebreakers.png
 ├── backend
 │   ├── api_server.py
-│   ├── DWL_Scores.xlsx
+│   ├── Dockerfile
 │   ├── dwl_scoring_pipeline.py
-│   ├── espn_match_info
-│   │   ├── match_10.json
-│   │   └── match_11.json
-│   ├── espn_names_match
-│   │   └── espn_names_match_11.txt
 │   ├── requirements.txt
 │   ├── setup_backend.sh
 │   ├── WWC_Config.xlsx
-│   ├── wwc_fantasy.py
-│   └── wwc_match_data.json
+│   └── wwc_fantasy.py
 ├── Final Folder Structure.txt
 ├── frontend
 │   ├── index.html
@@ -19,28 +15,40 @@
 │   ├── package.json
 │   ├── public
 │   │   ├── delulu-womens-league.jpeg
+│   │   ├── dwl-logo.png
+│   │   ├── group-ai.jpeg
 │   │   ├── logos
-│   │   │   ├── andhra-capitals.png
-│   │   │   ├── chennai-thunder.png
 │   │   │   ├── gully-divas.png
-│   │   │   ├── hyderabad-haramis.png
-│   │   │   ├── kochi-tuskers.png
+│   │   │   ├── janaki-royals.png
 │   │   │   ├── konkan-queens.png
-│   │   │   ├── kutte-kamine-riders.png
-│   │   │   ├── nepali-rhinos.png
-│   │   │   └── rajasthan-ragers.png
+│   │   │   ├── rajputana-ranis.png
+│   │   │   ├── sarafa-strikers.png
+│   │   │   ├── singara-singapengal.png
+│   │   │   └── vanitha-warriors.png
+│   │   ├── owners
+│   │   │   ├── ag.jpeg
+│   │   │   ├── bv.jpeg
+│   │   │   ├── kp.jpeg
+│   │   │   ├── ku.jpeg
+│   │   │   ├── nb.jpeg
+│   │   │   ├── ns.jpeg
+│   │   │   └── sjd.jpeg
 │   │   └── teams-ai.jpeg
 │   ├── setup_frontend.sh
 │   ├── src
 │   │   ├── App.jsx
 │   │   ├── components
+│   │   │   ├── AboutUs.jsx
+│   │   │   ├── ChangePassword.jsx
 │   │   │   ├── Dashboard.jsx
+│   │   │   ├── EndTournament.jsx
 │   │   │   ├── MatchDetailsModal.jsx
 │   │   │   ├── Matches.jsx
 │   │   │   ├── Navbar.jsx
 │   │   │   ├── PlayerNameWithBadge.jsx
 │   │   │   ├── Players.jsx
 │   │   │   ├── Scoring.jsx
+│   │   │   ├── Settings.jsx
 │   │   │   ├── Standings.jsx
 │   │   │   ├── Stats.jsx
 │   │   │   └── Teams.jsx
@@ -50,6 +58,17 @@
 │   │   │   └── teamOwners.js
 │   │   ├── index.css
 │   │   ├── index.jsx
+│   │   ├── services
+│   │   │   ├── api.js
+│   │   │   └── statsService.js
+│   │   └── styles
+│   │       └── App.css
+│   └── vite.config.js
+├── README.md
+├── Script Usage Instructions.png
+├── start.bat
+├── start.py
+└── start.sh
 │   │   ├── services
 │   │   │   └── api.js
 │   │   └── styles

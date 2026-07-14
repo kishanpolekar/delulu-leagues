@@ -1,184 +1,151 @@
 # DWL Fantasy League Platform
 
-## Complete Fantasy Cricket Management System
+## Full-stack fantasy cricket management system for the Delulu Women’s League
 
-A full-stack fantasy cricket platform for the Delulu Women's League (DWL), featuring automated scorecard fetching, real-time point calculation, team management, and interactive dashboards.
+This repository contains a complete fantasy-cricket workflow for the Delulu Women’s League (DWL). The application fetches match scorecards from ESPNcricinfo, maps ESPN player names to DWL roster players, calculates fantasy points using WWC-style rules, stores match history, generates a standings Excel workbook, and exposes the data through a React frontend and a FastAPI backend.
 
-## 🏏 Overview
-
-This platform automates the entire fantasy cricket league management process:
-
-1. **Automated Scorecard Fetching** - Pulls live match data from ESPNcricinfo
-2. **Smart Player Matching** - Maps ESPN players to DWL fantasy rosters
-3. **Real-time Point Calculation** - Applies WWC scoring rules with captain/VC multipliers
-4. **Interactive Dashboard** - React-based frontend for league management
-5. **Admin Controls** - Secure match fetching and configuration management
+The system is implemented across three Python modules and one React app:
+- Backend fetcher and scoring engine: backend/wwc_fantasy.py
+- Backend pipeline and Excel generation: backend/dwl_scoring_pipeline.py
+- Backend API and admin logic: backend/api_server.py
+- Frontend: frontend/src
 
 ---
 
-## 📋 Table of Contents
+## 1. What the application does
 
-- [System Architecture](#-system-architecture)
-- [Features](#-features)
-- [Prerequisites](#-prerequisites)
-- [Installation](#-installation)
-- [Configuration](#-configuration)
-- [Running the Application](#-running-the-application)
-- [API Documentation](#-api-documentation)
-- [Frontend Guide](#-frontend-guide)
-- [Scoring Rules](#-scoring-rules)
-- [Troubleshooting](#-troubleshooting)
-- [Development](#-development)
+The platform automates the following workflow:
+
+1. Load DWL league configuration from a single Excel file.
+2. Fetch a live or archived match scorecard from ESPNcricinfo using Playwright.
+3. Extract batting, bowling, fielding, and super-over statistics.
+4. Match ESPN player names to DWL roster names using a normalization and fuzzy-style matching strategy.
+5. Apply fantasy scoring rules, captain and vice-captain multipliers, and player-of-the-match bonuses.
+6. Store match results in local JSON or Supabase.
+7. Generate a professional Excel workbook with:
+   - one sheet per DWL team,
+   - a standings sheet,
+   - per-match point columns,
+   - team totals and player totals.
+8. Expose the data to a React dashboard through a FastAPI API.
 
 ---
 
-## 🏗️ System Architecture
+## 2. Core architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Frontend (React)                         │
-│                    http://localhost:5173                        │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │
-                              │ REST API
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     API Server (FastAPI)                        │
-│                     http://localhost:8000                       │
-├─────────────────────────────────────────────────────────────────┤
-│  • Match fetching endpoint      • Authentication                │
-│  • Standings generation         • Excel download                │
-│  • Player/team management       • Config upload                 │
-└─────────────┬───────────────────────────────┬───────────────────┘
-              │                               │
-              │                               │
-              ▼                               ▼
-┌─────────────────────────┐     ┌─────────────────────────────────┐
-│  ESPNcricinfo Scraper   │     │      Supabase Database          │
-│    (Playwright/WebKit)  │     │    • Match history              │
-│                         │     │    • Player stats               │
-│  • WWC Fantasy Points   │     │    • Team standings             │
-│  • Super Over support   │     └─────────────────────────────────┘
-│  • Player matching      │
-└─────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Local File Storage                           │
-│  • WWC_Config.xlsx (league configuration)                       │
-│  • DWL_Scores.xlsx (generated reports)                          │
-│  • espn_match_info/ (raw match data)                            │
-└─────────────────────────────────────────────────────────────────┘
+```text
+React frontend (Vite)  ->  FastAPI backend  ->  ESPNcricinfo scraper
+        |                             |                 |
+        |                             |                 +--> match data + player stats
+        |                             |
+        |                             +--> local JSON or Supabase storage
+        |
+        +--> Excel download / standings workbook
 ```
 
----
+### Backend modules
 
-## ✨ Features
+- backend/wwc_fantasy.py
+  - Uses Playwright WebKit to fetch ESPN match pages.
+  - Extracts the page’s __NEXT_DATA__ payload.
+  - Builds team mappings, home/away teams, player-of-match information, and player stat objects.
+  - Calculates fantasy points using WWC-style rules.
+  - Supports super-over handling.
 
-### Backend Features
-- ✅ **Automated Scorecard Fetching** - Real-time data from ESPNcricinfo
-- ✅ **Super Over Support** - Full handling of one-over eliminators
-- ✅ **Comprehensive Scoring Rules** - Batting, bowling, fielding with bonuses
-- ✅ **Smart Player Matching** - Multi-strategy name matching algorithm
-- ✅ **Captain/VC Multipliers** - 2x and 1.5x point multipliers
-- ✅ **Supabase Integration** - Cloud-based data persistence
-- ✅ **Excel Report Generation** - Per-team sheets with match-by-match breakdown
-- ✅ **Admin Authentication** - Password protection with lockout mechanism
-- ✅ **CORS Support** - Secure frontend-backend communication
+- backend/dwl_scoring_pipeline.py
+  - Reads the DWL Excel config.
+  - Maps ESPN players to DWL roster players.
+  - Processes a fetched scorecard into a DWL match entry.
+  - Saves match history and award data locally or to Supabase.
+  - Generates the Excel workbook that powers the standings and team sheets.
 
-### Frontend Features
-- ✅ **Interactive Dashboard** - Real-time standings and match updates
-- ✅ **Team Management** - View rosters with captain/VC indicators
-- ✅ **Player Stats** - Detailed performance metrics per player
-- ✅ **Match History** - Browse past matches with detailed stats
-- ✅ **Admin Panel** - Secure match fetching and configuration upload
-- ✅ **Responsive Design** - Works on desktop and tablet devices
-- ✅ **Team Logos** - Visual identification for all 7 DWL teams
-- ✅ **Owner Profiles** - Team owner information and photos
+- backend/api_server.py
+  - Runs a FastAPI application.
+  - Serves team, player, match, standings, award, and download endpoints.
+  - Implements password verification and lockout protection.
+  - Loads the Excel config on startup and serves it to the frontend.
 
----
+### Frontend modules
 
-## 📦 Prerequisites
+- frontend/src/App.jsx
+  - Main application shell.
+  - Loads backend health and data on startup.
+  - Routes between dashboard, standings, teams, players, matches, stats, settings, and about pages.
 
-### System Requirements
-- **Python 3.8+** (backend)
-- **Node.js 16+** (frontend)
-- **npm** or **yarn** (package manager)
+- frontend/src/services/api.js
+  - Central API client for backend requests.
+  - Handles health checks, team/player/match downloads, Excel download, admin password flows, and award application.
 
-### Required Accounts
-- **Supabase** (free tier) - For data persistence
-- **ESPNcricinfo** (no account needed - public access)
+- frontend/src/services/statsService.js
+  - Aggregates tournament stats such as most runs, most wickets, highest strike rate, and best economy.
 
 ---
 
-## 🚀 Installation
+## 3. Runtime flow
 
-### 1. Clone the Repository
-```bash
-git clone <repository-url>
-cd dwl-fantasy-platform
-```
+### A. Startup
+When the backend starts, it:
+- loads environment variables from a local .env file,
+- reads backend/WWC_Config.xlsx if present,
+- builds team and player lookup data,
+- loads match history from local JSON or Supabase,
+- exposes the app over localhost:8000.
 
-### 2. Backend Setup
+### B. Match ingestion
+When a match is fetched:
+- the ESPN page is loaded through Playwright,
+- the __NEXT_DATA__ JSON is parsed,
+- batting, bowling, fielding, and super-over data are collected,
+- player names are matched to DWL roster names,
+- fantasy points are calculated,
+- the result is stored in the match history,
+- the Excel workbook is regenerated.
 
-```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install Python dependencies
-pip install playwright pandas openpyxl supabase fastapi uvicorn python-dotenv
-
-# Install Playwright browsers
-playwright install webkit
-```
-
-### 3. Frontend Setup
-
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Or use the setup script (Linux/Mac)
-chmod +x setup_frontend.sh
-./setup_frontend.sh
-```
+### C. Frontend usage
+The React app:
+- calls the FastAPI endpoints to load teams, players, matches, standings, and awards,
+- displays the current leaderboard and detailed match breakdowns,
+- allows the admin to fetch a new match and change the admin password.
 
 ---
 
-## ⚙️ Configuration
+## 4. Required environment variables
 
-### 1. Environment Variables (.env)
-
-Create a `.env` file in the project root:
+Create a .env file in the project root with values similar to:
 
 ```env
-# Supabase Configuration
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your-anon-or-service-role-key
-
-# Admin Security
-ADMIN_PASSWORD=your_secure_password_here
+ADMIN_PASSWORD=SimplePass123
 MAX_FAILED_ATTEMPTS=3
-LOCKOUT_DURATION_MINUTES=30
-
-# CORS Configuration (comma-separated)
-ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
-
-# Server Configuration (optional)
+LOCKOUT_DURATION_MINUTES=5
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+STORAGE_MODE=local
 API_HOST=127.0.0.1
 API_PORT=8000
 ```
 
-### 2. League Configuration (WWC_Config.xlsx)
+### Notes
+- If STORAGE_MODE=local, data is stored in JSON files in the project directory.
+- If STORAGE_MODE=production, the backend uses Supabase tables named matches and awards, plus Supabase storage for the Excel workbook.
+- The admin password is also stored in memory and can be updated through the API and the Settings UI.
 
-Create an Excel file with the following sheets:
+---
 
-#### Sheet 1: "DWLTeams"
+## 5. Excel configuration format
+
+The application expects a single Excel file named WWC_Config.xlsx in the backend directory or project root.
+
+### Required sheets
+
+#### Sheet: DWLTeams
+Columns:
+- Abbrv
+- Team Name
+
+Example:
 | Abbrv | Team Name |
-|-------|-----------|
+|---|---|
 | GD | Gully Divas |
 | JR | Janaki Royals |
 | KQ | Konkan Queens |
@@ -187,485 +154,322 @@ Create an Excel file with the following sheets:
 | SGS | Singara Singapengal |
 | VW | Vanitha Warriors |
 
-#### Sheet 2: "Players"
+#### Sheet: Players
+Columns:
+- Player Name
+- Role
+- DWL Team
+- Country
+- Sold Price
+
+Example:
 | Player Name | Role | DWL Team | Country | Sold Price |
-|-------------|------|----------|---------|------------|
+|---|---|---|---|---|
 | Beth Mooney | Wicketkeeper | Gully Divas | Australia | 8.5 |
 | Smriti Mandhana | Batter | Janaki Royals | India | 9.0 |
-| Deepti Sharma | All-rounder | Konkan Queens | India | 7.5 |
-| Sophie Ecclestone | Bowler | Rajputana Ranis | England | 8.0 |
 
-**Role values:** `Wicketkeeper`, `Batter`, `Bowler`, `All-rounder`
+Supported role values are lowercased and used as-is for display, including wicketkeeper, batter, bowler, and all-rounder.
 
-**Country values:** Australia, Bangladesh, India, Netherlands, Pakistan, South Africa, England, Ireland, New Zealand, Scotland, Sri Lanka, West Indies
+#### Team sheets
+Each DWL team abbreviation must have a sheet with the same name as the abbreviation, for example GD, JR, KQ, RR, SS, SGS, VW.
 
-#### Team Sheets (GD, JR, KQ, RR, SS, SGS, VW)
+The pipeline reads the 4th column in these sheets and interprets values such as:
+- Captain
+- Vice-Captain
 
-Each team sheet defines captain/vice-captain for each match round:
-
-| (Empty) | Player Name | (Empty) | Role |
-|---------|-------------|---------|------|
-| | Beth Mooney | | Captain |
-| | Tahlia McGrath | | Vice-Captain |
-| | Ashleigh Gardner | | |
-| | Ellyse Perry | | |
-
-**Important:** The pipeline reads the 4th column (Role) - values should be "Captain" or "Vice-Captain" (case-insensitive).
-
-### 3. Supabase Setup
-
-Create a `matches` table in your Supabase project:
-
-```sql
-CREATE TABLE matches (
-    match_num INTEGER PRIMARY KEY,
-    match_entry JSONB NOT NULL,
-    team1_country TEXT,
-    team2_country TEXT,
-    match_winner TEXT,
-    match_title TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-```
+The values are translated into multipliers:
+- Captain = 2.0x
+- Vice-Captain = 1.5x
+- Everyone else = 1.0x
 
 ---
 
-## 🎯 Running the Application
+## 6. Fantasy scoring rules implemented
 
-### Option 1: Full Stack (Recommended)
+The scoring engine in backend/wwc_fantasy.py implements the WWC-style points system used in this project.
 
-#### Terminal 1: Backend API Server
-```bash
-# From project root
-python api_server.py
-```
-Expected output:
-```
-==================================================
-🚀 Starting DWL Fantasy League API Server
-==================================================
-📖 Loading configuration from WWC_Config.xlsx
-   Loaded 7 teams
-   Loaded 112 players
-✅ Configuration loaded successfully
-INFO:     Uvicorn running on http://127.0.0.1:8000
-```
+### Batting points
+- Run: +1 each
+- Four: +1 each
+- Six: +2 each
+- Fifty (50-99): +25
+- Century (100-149): +50
+- 150+: +75
+- Duck (out for 0): -15
+- Golden duck (1 ball): -25
+- Diamond duck (0 balls): -35
 
-#### Terminal 2: Frontend Development Server
-```bash
-cd frontend
-npm run dev
-```
-Expected output:
-```
-  VITE v5.0.0  ready in 500 ms
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: use --host to expose
-```
+### Strike-rate bonuses
+The code applies a strike-rate bonus if the batter faces at least 3 balls.
+- 150-174.99: +5
+- 175-199.99: +10
+- 200-224.99: +15
+- 225-249.99: +20
+- 250-274.99: +25
+- 275-299.99: +30
+- 300-324.99: +35
+- 325-349.99: +40
+- 350-599.99: +45
+- 600+: +50
 
-### Option 2: Backend Only (CLI Mode)
+A penalty of -15 is applied when the strike rate is below 100 and the batter has scored runs or remained not out.
 
-```bash
-# Fetch and calculate points for a match
-python wwc_fantasy.py -m 1527674
+### Bowling points
+- Wicket: +40 each
+- 3-wicket haul: +25
+- 4-wicket haul: +35
+- 5-wicket haul: +50
+- 6+ wickets: +75
+- Hat-trick: +45
+- Maiden over: +20
 
-# Process match for DWL league
-python dwl_scoring_pipeline.py -m 1527674 -n 1
+### Economy-rate bonuses and penalties
+The code evaluates economy after converting overs into decimal form and requiring at least 6 balls (1.0 overs).
+- 0.00-3.99: +50
+- 4.00-4.99: +35
+- 5.00-5.99: +25
+- 6.00-6.99: +15
+- 7.00-7.99: +10
+- 12.00-13.99: -10
+- 14.00-15.99: -15
+- 16.00-19.99: -20
+- 20.00+: -25
 
-# Generate Excel from existing matches
-python dwl_scoring_pipeline.py
-```
+### Fielding points
+- Catch: +30
+- Run out: +30
+- Stumping: +30
 
-### Option 3: Frontend Only (Development)
+### Bonus
+- Player of the Match: +50
 
-```bash
-cd frontend
-npm run dev
-# API calls will go to http://localhost:8000
-```
+### Captain and vice-captain multipliers
+- Captain: 2.0x
+- Vice-Captain: 1.5x
+- Regular player: 1.0x
+
+### Super Over handling
+The app supports super-over data and calculates separate super-over batting, bowling, and fielding points. Super-over wicket-haul bonuses are not applied, but multi-over economy calculations are still handled. Super-over points are stored separately and included in the final total when relevant.
 
 ---
 
-## 🔌 API Documentation
+## 7. Player matching logic
 
-### Base URL
+The pipeline does not rely on a single exact-name match. Instead, it uses several strategies in backend/dwl_scoring_pipeline.py:
+
+1. Direct match on normalized full name.
+2. Match on short name or ESPN shorthand variants.
+3. Match on fielding name (last name) when it is unique for a country.
+4. Match by substring containment when a full-name and roster-name overlap.
+
+If a match cannot be resolved confidently, the player is listed as unmatched.
+
+---
+
+## 8. Data structures and persistence
+
+### Match history
+Each saved match is stored as:
+```json
+{
+  "match_num": 1,
+  "match_entry": {
+    "Beth Mooney": {
+      "pts": 145,
+      "regular_pts": 145,
+      "regular_batting_pts": 70,
+      "regular_bowling_pts": 0,
+      "regular_fielding_pts": 0,
+      "super_over_pts": 0,
+      "so_batting_pts": 0,
+      "so_bowling_pts": 0,
+      "so_fielding_pts": 0,
+      "final_pts": 290,
+      "is_motm": true,
+      "dwl_team": "Gully Divas",
+      "country": "AUS-W",
+      "_stats": { ... }
+    }
+  },
+  "team1_country": "IND-W",
+  "team2_country": "PAK-W",
+  "match_winner": "IND-W",
+  "match_title": "M1: India Women vs Pakistan Women"
+}
 ```
+
+### Award data
+Award data is stored as a structure containing:
+- award winners (player-level bonus points),
+- team-level award icon arrays.
+
+The Excel workbook can include award bonuses and visual indicators after awards are applied.
+
+### Local storage
+The backend writes:
+- backend/wwc_match_data.json for match history
+- backend/wwc_award_data.json for award data
+- backend/DWL_Scores.xlsx for the generated workbook
+- backend/espn_match_info for raw saved ESPN payloads
+- backend/espn_names_match for extracted ESPN names
+
+---
+
+## 9. Backend API reference
+
+Base URL:
+```text
 http://localhost:8000
 ```
 
-### Public Endpoints
+### Public endpoints
+- GET / : API metadata and route summary
+- GET /api/health : backend health status
+- GET /api/teams : all DWL teams with rosters and point totals
+- GET /api/players : all players with points, team, role, country, and captain/VC marker
+- GET /api/matches : all processed matches with team totals by match
+- GET /api/match-details/{match_num} : full per-player details for one match
+- GET /api/standings : sorted standings data
+- GET /api/download-excel : download the Excel workbook
+- GET /api/espn-match-info/{match_num} : fetch saved ESPN match payload
+- GET /api/password-status : current admin lockout state
+- GET /api/admin-config : number of allowed failed attempts and lockout duration
+- GET /api/storage-mode : storage mode info
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/` | API information and available endpoints |
-| GET | `/api/health` | Health check with configuration status |
-| GET | `/api/teams` | Get all DWL teams with rosters and standings |
-| GET | `/api/players` | Get all players with points and roles |
-| GET | `/api/matches` | Get list of all matches |
-| GET | `/api/match-details/{match_num}` | Get detailed stats for a specific match |
-| GET | `/api/standings` | Get current league standings |
-| GET | `/api/download-excel` | Download DWL_Scores.xlsx report |
-| GET | `/api/espn-match-info/{match_num}` | Get raw ESPN match data |
-| GET | `/api/password-status` | Get admin lockout status |
-| GET | `/api/admin-config` | Get admin configuration |
+### Admin endpoints
+- POST /api/verify-password : verifies the admin password and tracks failed attempts
+- POST /api/change-password : changes the admin password and updates the .env file if present
+- POST /api/fetch-match : fetches a match, processes scorecard data, saves it, and regenerates the Excel workbook
+- POST /api/apply-awards : applies award bonuses and updates the Excel workbook
+- GET /api/awards : loads award data
+- GET /api/team-awards : loads team award icons for the standings table
 
-### Admin Endpoints (Requires Authentication)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/verify-password` | Verify admin password |
-| POST | `/api/change-password` | Change admin password |
-| POST | `/api/fetch-match` | Fetch and process a new match |
-| POST | `/api/upload-config` | Upload new configuration file |
-
-### Example: Fetch a Match
-
+### Example request
 ```bash
 curl -X POST http://localhost:8000/api/fetch-match \
   -H "Content-Type: application/json" \
   -d '{"match_id":1527674,"match_num":1}'
 ```
 
-Response:
-```json
-{
-  "success": true,
-  "match_num": 1,
-  "team1": "IND-W",
-  "team2": "PAK-W",
-  "match_winner": "IND-W",
-  "match_entry": {
-    "Beth Mooney": {
-      "pts": 145,
-      "final_pts": 290,
-      "is_motm": true,
-      "dwl_team": "Gully Divas"
-    }
-  },
-  "unmatched": [],
-  "info": "M1: India Women vs Pakistan Women | 2024-02-15 | India won by 6 wickets"
-}
+---
+
+## 10. Frontend experience
+
+The frontend is a single-page React application with animated transitions and multiple views.
+
+### Main views
+- Dashboard: overview of the league and top performers.
+- Teams: rosters with captain/VC badges and points.
+- Players: list of players with team, role, points, sold price, and status.
+- Matches: browse processed matches, open detail modals, and add new matches through the admin workflow.
+- Standings: points table with team logos, recent form, and award icons.
+- Stats: league-level leaders for runs, wickets, strike rate, and economy.
+- Settings: password change and admin controls.
+- About: team-owner and league information.
+
+### Admin workflow in the UI
+1. Open the Matches view.
+2. Enter the admin password.
+3. Submit a match ID and a DWL match number.
+4. The backend fetches the match, calculates points, stores it, and regenerates the Excel report.
+5. The application updates the standings and match data reactively.
+
+### Security behavior in the frontend
+The Matches page implements a front-end lockout state for repeated failed password attempts. The lockout duration and maximum attempts are loaded from the backend and mirrored to local storage as a fallback.
+
+---
+
+## 11. Excel workbook output
+
+The Excel file generated by the pipeline contains:
+- one sheet per DWL team,
+- a Standings sheet,
+- a column for each processed match,
+- player totals and overall team totals,
+- optional award bonus and award icon columns.
+
+### Team sheet layout
+Each team sheet contains:
+- team title and abbreviation,
+- legend for captain / vice-captain / player-of-the-match,
+- player roster rows,
+- match-by-match score columns,
+- a final team total.
+
+### Standings sheet layout
+The standings sheet shows:
+- position,
+- team name and abbreviation,
+- total points,
+- per-match totals,
+- optional award icons.
+
+---
+
+## 12. Running the application
+
+### Backend
+From the project root:
+```bash
+cd backend
+python api_server.py
+```
+
+The server runs on:
+```text
+http://127.0.0.1:8000
+```
+
+### Frontend
+From the frontend folder:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend runs on:
+```text
+http://localhost:5173 | http://localhost:3000
+```
+
+### CLI mode
+You can also run the scoring pipeline without the web app:
+```bash
+cd backend
+python wwc_fantasy.py -m 1527674
+python dwl_scoring_pipeline.py -m 1527674 -n 1
+python dwl_scoring_pipeline.py
 ```
 
 ---
 
-## 🎨 Frontend Guide
+## 13. Project structure
 
-### Application Structure
-
-```
-frontend/
-├── src/
-│   ├── components/
-│   │   ├── Dashboard.jsx      # Main dashboard with stats
-│   │   ├── Teams.jsx          # Team rosters and points
-│   │   ├── Players.jsx        # Player directory
-│   │   ├── Matches.jsx        # Match history
-│   │   ├── Standings.jsx      # League standings
-│   │   ├── Stats.jsx          # Advanced statistics
-│   │   ├── Settings.jsx       # Admin controls
-│   │   ├── AboutUs.jsx        # Team information
-│   │   └── Navbar.jsx         # Navigation component
-│   ├── services/
-│   │   ├── api.js             # API service layer
-│   │   └── statsService.js    # Statistics calculations
-│   ├── data/
-│   │   ├── teamColors.js      # Team color schemes
-│   │   ├── teamOwners.js      # Owner information
-│   │   └── countryInfo.js     # Country mappings
-│   └── styles/
-│       └── App.css            # Global styles
-```
-
-### Navigation
-
-| Page | Route | Description |
-|------|-------|-------------|
-| Dashboard | `/` | Overview with key statistics |
-| Teams | `/teams` | Team rosters with captain/VC badges |
-| Players | `/players` | All players with points and roles |
-| Matches | `/matches` | Match history with results |
-| Standings | `/standings` | League leaderboard |
-| Stats | `/stats` | Detailed player statistics |
-| Settings | `/settings` | Admin panel (password required) |
-| About | `/about` | Team and owner information |
-
-### Admin Workflow
-
-1. **Navigate to Settings** (`/settings`)
-2. **Enter Admin Password** (configured in `.env`)
-3. **Fetch New Match:**
-   - Enter ESPNcricinfo match ID
-   - Enter league match number
-   - Click "Fetch Match"
-4. **Upload Configuration:**
-   - Upload updated `WWC_Config.xlsx`
-   - System reloads automatically
-5. **Download Reports:**
-   - Click "Download Excel Report"
-   - Get comprehensive league data
-
-### Frontend Features in Detail
-
-#### Dashboard
-- Real-time standings update
-- Top performers (batting, bowling, fielding)
-- Recent matches summary
-- Team performance charts
-
-#### Teams View
-- Team cards with logos and colors
-- Player rosters with role badges
-- Captain (🏆) and Vice-Captain (🥈) indicators
-- Individual player points
-
-#### Match Details Modal
-- Full scorecard with all players
-- Batting stats (runs, balls, 4s, 6s, SR)
-- Bowling stats (overs, maidens, wickets, economy)
-- Fielding stats (catches, run-outs, stumpings)
-- Super Over stats (when applicable)
-- Point breakdown by category
-
-#### Stats Page
-- Batting leaderboard
-- Bowling leaderboard
-- Fielding leaderboard
-- Most Valuable Player (MVP) rankings
-- Player comparison tools
-
----
-
-## 📊 Scoring Rules
-
-### Batting Points
-
-| Event | Points |
-|-------|--------|
-| Run | +1 |
-| Four | +1 (bonus) |
-| Six | +2 (bonus) |
-| Fifty (50-99) | +25 |
-| Century (100-149) | +50 |
-| 150+ runs | +75 |
-| Duck (out for 0) | -15 |
-| Golden Duck (1 ball) | -25 |
-| Diamond Duck (0 balls) | -35 |
-
-### Strike Rate Bonus (min 3 balls)
-
-| Strike Rate | Points |
-|-------------|--------|
-| 150-174.99 | +5 |
-| 175-199.99 | +10 |
-| 200-224.99 | +15 |
-| 225-249.99 | +20 |
-| 250-274.99 | +25 |
-| 275-299.99 | +30 |
-| 300-324.99 | +35 |
-| 325-349.99 | +40 |
-| 350-599.99 | +45 |
-| 600+ | +50 |
-
-**Penalty:** -15 for SR < 100 (runs > 0 OR not out)
-
-### Bowling Points
-
-| Event | Points |
-|-------|--------|
-| Wicket | +40 |
-| 3-wicket haul | +25 |
-| 4-wicket haul | +35 |
-| 5-wicket haul | +50 |
-| 6+ wickets | +75 |
-| Hat-trick | +45 |
-| Maiden over | +20 |
-
-### Economy Rate (min 6 balls)
-
-| Economy | Points |
-|---------|--------|
-| 0.00-3.99 | +50 |
-| 4.00-4.99 | +35 |
-| 5.00-5.99 | +25 |
-| 6.00-6.99 | +15 |
-| 7.00-7.99 | +10 |
-| 12.00-13.99 | -10 |
-| 14.00-15.99 | -15 |
-| 16.00-19.99 | -20 |
-| 20.00+ | -25 |
-
-### Fielding Points
-
-| Event | Points |
-|-------|--------|
-| Catch | +30 |
-| Run Out | +30 |
-| Stumping | +30 |
-
-### Bonuses
-
-| Bonus | Points |
-|-------|--------|
-| Player of the Match | +50 |
-
-### Captain/VC Multipliers
-
-| Role | Multiplier |
-|------|------------|
-| Captain | 2.0x |
-| Vice-Captain | 1.5x |
-| Regular | 1.0x |
-
----
-
-## 🔧 Troubleshooting
-
-### Common Issues and Solutions
-
-#### Backend Issues
-
-| Issue | Solution |
-|-------|----------|
-| `ModuleNotFoundError: No module named 'playwright'` | Run `pip install playwright && playwright install webkit` |
-| `Could not find __NEXT_DATA__ in page` | ESPN changed page structure; check match URL |
-| `Supabase connection failed` | Verify SUPABASE_URL and SUPABASE_KEY in .env |
-| `Config file not found` | Ensure WWC_Config.xlsx is in project root |
-| `Port 8000 already in use` | Change port: `uvicorn api_server:app --port 8001` |
-
-#### Frontend Issues
-
-| Issue | Solution |
-|-------|----------|
-| `API calls failing` | Check if backend is running on port 8000 |
-| `CORS errors` | Update ALLOWED_ORIGINS in .env to include frontend URL |
-| `Build fails` | Delete node_modules and run `npm install` again |
-| `Blank page on load` | Check browser console for errors |
-
-#### Playwright Issues
-
-```bash
-# Reinstall Playwright browsers
-playwright install webkit --force
-
-# Or install all browsers
-playwright install --force
-
-# Check installation
-playwright --version
-```
-
-#### Excel Generation Issues
-
-```bash
-# Check file permissions
-chmod 644 DWL_Scores.xlsx
-
-# Verify openpyxl installation
-pip install --upgrade openpyxl
-
-# Check config file structure
-python -c "import pandas as pd; print(pd.ExcelFile('WWC_Config.xlsx').sheet_names)"
-```
-
-### Debug Mode
-
-Enable debug output for detailed logging:
-
-```bash
-# Backend debug
-python api_server.py --debug
-
-# CLI debug
-python wwc_fantasy.py -m 1527674 --debug
-python dwl_scoring_pipeline.py -m 1527674 -n 1 --debug
-```
-
----
-
-## 🧪 Development
-
-### Running Tests
-
-```bash
-# Test API endpoints
-curl http://localhost:8000/api/health
-
-# Test player matching
-python -c "from dwl_scoring_pipeline import build_dwl_lookup; print(build_dwl_lookup(['Beth Mooney', 'S Mandhana']))"
-
-# Test ESPN fetching
-python wwc_fantasy.py -m 1527674 --quiet
-```
-
-### Project Structure
-
-```
+```text
 dwl-fantasy-platform/
-.
-├── backend
-│   ├── api_server.py
-│   ├── Dockerfile
-│   ├── dwl_scoring_pipeline.py
-│   ├── requirements.txt
-│   ├── setup_backend.sh
-│   ├── WWC_Config.xlsx
-│   └── wwc_fantasy.py
-├── Final Folder Structure.txt
-├── frontend
-│   ├── index.html
-│   ├── package-lock.json
-│   ├── package.json
-│   ├── public
-│   │   ├── delulu-womens-league.jpeg
-│   │   ├── dwl-logo.png
-│   │   ├── group-ai.jpeg
-│   │   ├── logos
-│   │   │   ├── gully-divas.png
-│   │   │   ├── janaki-royals.png
-│   │   │   ├── konkan-queens.png
-│   │   │   ├── rajputana-ranis.png
-│   │   │   ├── sarafa-strikers.png
-│   │   │   ├── singara-singapengal.png
-│   │   │   └── vanitha-warriors.png
-│   │   ├── owners
-│   │   │   ├── ag.jpeg
-│   │   │   ├── bv.jpeg
-│   │   │   ├── kp.jpeg
-│   │   │   ├── ku.jpeg
-│   │   │   ├── nb.jpeg
-│   │   │   ├── ns.jpeg
-│   │   │   └── sjd.jpeg
-│   │   └── teams-ai.jpeg
-│   ├── setup_frontend.sh
-│   ├── src
-│   │   ├── App.jsx
-│   │   ├── components
-│   │   │   ├── AboutUs.jsx
-│   │   │   ├── ChangePassword.jsx
-│   │   │   ├── Dashboard.jsx
-│   │   │   ├── MatchDetailsModal.jsx
-│   │   │   ├── Matches.jsx
-│   │   │   ├── Navbar.jsx
-│   │   │   ├── PlayerNameWithBadge.jsx
-│   │   │   ├── Players.jsx
-│   │   │   ├── Scoring.jsx
-│   │   │   ├── Settings.jsx
-│   │   │   ├── Standings.jsx
-│   │   │   ├── Stats.jsx
-│   │   │   └── Teams.jsx
-│   │   ├── data
-│   │   │   ├── countryInfo.js
-│   │   │   ├── teamColors.js
-│   │   │   └── teamOwners.js
-│   │   ├── index.css
-│   │   ├── index.jsx
-│   │   ├── services
-│   │   │   ├── api.js
-│   │   │   └── statsService.js
-│   │   └── styles
-│   │       └── App.css
-│   └── vite.config.js
+├── backend/
+│   ├── api_server.py
+│   ├── dwl_scoring_pipeline.py
+│   ├── wwc_fantasy.py
+│   ├── requirements.txt
+│   ├── setup_backend.sh
+│   ├── WWC_Config.xlsx
+│   ├── wwc_match_data.json
+│   ├── wwc_award_data.json
+│   ├── DWL_Scores.xlsx
+│   ├── espn_match_info/
+│   └── espn_names_match/
+├── frontend/
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── public/
+│   └── src/
+│       ├── App.jsx
+│       ├── components/
+│       ├── data/
+│       ├── services/
+│       └── styles/
 ├── README.md
 ├── Script Usage Instructions.png
 ├── start.bat
@@ -673,120 +477,38 @@ dwl-fantasy-platform/
 └── start.sh
 ```
 
-### Creating requirements.txt
+---
 
+## 14. Troubleshooting
+
+### Common issues
+- Playwright error: install browsers with `playwright install webkit`.
+- Config file missing: ensure WWC_Config.xlsx is present.
+- Backend cannot connect: verify the FastAPI server is running and CORS origins are allowed.
+- Excel download fails: verify the workbook exists and the backend has permissions to read it.
+- Password lockout: wait for the lockout window to expire or change the password through the environment and restart the server.
+
+### Useful debugging commands
 ```bash
-pip freeze > requirements.txt
-```
-
-Example `requirements.txt`:
-```
-fastapi==0.104.1
-uvicorn==0.24.0
-pandas==2.1.3
-openpyxl==3.1.2
-playwright==1.40.0
-supabase==1.2.0
-python-dotenv==1.0.0
-```
-
-### Customizing Frontend
-
-#### Adding New Team Logo
-1. Add logo to `frontend/public/logos/`
-2. Update team mapping in `frontend/src/data/teamColors.js`
-
-#### Modifying Team Colors
-Edit `frontend/src/data/teamColors.js`:
-```javascript
-export const teamColors = {
-  "GD": { primary: "#FF6B6B", secondary: "#4ECDC4" },
-  // Add other teams...
-};
-```
-
-#### Updating Owner Information
-Edit `frontend/src/data/teamOwners.js`:
-```javascript
-export const teamOwners = {
-  "Gully Divas": {
-    name: "Owner Name",
-    photo: "/owners/photo.jpg",
-    bio: "Owner biography..."
-  }
-};
+cd backend
+python api_server.py
+python wwc_fantasy.py -m 1527674 --debug
+python dwl_scoring_pipeline.py -m 1527674 -n 1 --debug
 ```
 
 ---
 
-## 📈 Performance Optimization
+## 15. Summary
 
-### Backend Optimization
-- Use `--reload` only in development
-- Implement caching for frequently accessed data
-- Use connection pooling for Supabase
-- Batch Excel generation for multiple matches
+This application is a complete fantasy-cricket management system for the Delulu Women’s League. It combines:
+- an ESPN scorecard fetcher,
+- a fantasy scoring engine,
+- a DWL-specific matching and pipeline layer,
+- a FastAPI backend with admin controls,
+- a React dashboard with standings and player analytics,
+- and an Excel export workflow.
 
-### Frontend Optimization
-- Lazy load routes with React.lazy()
-- Implement virtual scrolling for large lists
-- Use React.memo() for expensive components
-- Optimize images and assets
-
----
-
-## 🔒 Security Best Practices
-
-1. **Never commit `.env` to version control**
-2. **Use strong ADMIN_PASSWORD** (min 12 chars with special chars)
-3. **Regularly rotate passwords** via Settings page
-4. **Use HTTPS in production** (deploy behind reverse proxy)
-5. **Implement rate limiting** for API endpoints
-6. **Validate all file uploads** (size, type, content)
-7. **Keep dependencies updated** (`npm audit`, `pip list --outdated`)
-
----
-
-## 🚢 Deployment
-
-### Backend Deployment (Production)
-
-```bash
-# Using gunicorn (Linux)
-gunicorn -w 4 -k uvicorn.workers.UvicornWorker api_server:app
-
-# Using systemd service
-sudo systemctl start dwl-api
-
-# Using Docker
-docker build -t dwl-api .
-docker run -p 8000:8000 --env-file .env dwl-api
-```
-
-### Frontend Deployment
-
-```bash
-# Build production bundle
-cd frontend
-npm run build
-
-# Serve with nginx
-sudo cp -r dist/* /var/www/html/dwl/
-
-# Or use Vite preview
-npm run preview
-```
-
-### Environment Variables for Production
-
-```env
-SUPABASE_URL=production_url
-SUPABASE_KEY=production_key
-ADMIN_PASSWORD=strong_password
-ALLOWED_ORIGINS=https://yourdomain.com
-API_HOST=0.0.0.0
-API_PORT=8000
-```
+The codebase is built around the idea that every match can be fetched, processed, stored, and displayed in a consistent way while preserving captain/vice-captain multipliers, super-over details, award bonuses, and detailed player-level stats.
 
 ---
 
@@ -794,7 +516,8 @@ API_PORT=8000
 
 ### Resources
 - **API Documentation**: `http://localhost:8000/docs` (FastAPI Swagger UI)
-- **Supabase Dashboard**: Your project dashboard
+- **Supabase Dashboard**: Your project's database dashboard
+- **Render Dashboard**: Your project's frontend and backend services dashboard
 - **ESPNcricinfo**: Match IDs and schedules
 
 ### Contact
@@ -819,15 +542,6 @@ This project is proprietary and confidential. Unauthorized copying, distribution
 - **Supabase** for cloud database services
 - **All DWL Team Owners** for their support
 - **Open Source Community** for the amazing tools
-
----
-
-## 📊 Version History
-
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0.0 | 2026-06-05 | Initial release with full functionality |
-| 1.0.1 | TBD | Bug fixes and performance improvements |
 
 ---
 
