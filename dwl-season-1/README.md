@@ -1,8 +1,10 @@
 # DWL Fantasy League Platform
 
-## Full-stack fantasy cricket management system for the Delulu Women’s League
+## Full-stack fantasy cricket management system for the Delulu Women’s League Season 1
 
-This repository contains a complete fantasy-cricket workflow for the Delulu Women’s League (DWL). The application fetches match scorecards from ESPNcricinfo, maps ESPN player names to DWL roster players, calculates fantasy points using WWC-style rules, stores match history, generates a standings Excel workbook, and exposes the data through a React frontend and a FastAPI backend.
+### The Actual League: [Women's T20 World Cup 2026](https://www.icc-cricket.com/tournaments/womens-t20-worldcup-2026)
+
+This repository contains a complete fantasy-cricket workflow for the Delulu Women’s League (DWL) Season 1. The application fetches match scorecards from ESPNcricinfo, maps ESPN player names to DWL roster players, calculates fantasy points using WWC-style rules, stores match history, generates a standings Excel workbook, and exposes the data through a React frontend and a FastAPI backend.
 
 The system is implemented across three Python modules and one React app:
 - Backend fetcher and scoring engine: backend/wwc_fantasy.py

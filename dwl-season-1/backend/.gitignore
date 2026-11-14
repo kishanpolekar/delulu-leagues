@@ -5,6 +5,7 @@ venv/
 
 # Data files
 warmups/
+supabase_queries/
 wwc_match_data.json
 wwc_award_data.json
 espn_match_info/
